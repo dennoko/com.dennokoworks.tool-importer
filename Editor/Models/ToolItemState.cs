@@ -97,8 +97,6 @@ namespace Dennokoworks.ToolImporter.Editor
     {
         public BlmItem Item;
         public List<PackageFile> Packages = new List<PackageFile>();
-        /// <summary>アイテムフォルダに未展開の zip がある。</summary>
-        public bool HasArchive;
         /// <summary>アイテムフォルダが存在する（BLM でダウンロード済み）。</summary>
         public bool DirectoryExists;
         public InstallState InstallState = InstallState.NoPackage;

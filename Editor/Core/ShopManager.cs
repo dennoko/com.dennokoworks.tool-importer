@@ -29,16 +29,22 @@ namespace Dennokoworks.ToolImporter.Editor
 
         public IReadOnlyList<ShopInfo> Shops => _shops;
 
+        /// <summary>ショップで絞り込まない（全ショップのアイテムを表示する）選択肢。subdomain は空。</summary>
+        public static readonly ShopInfo AllShops = new ShopInfo(string.Empty, "None");
+
         public ShopInfo CurrentShop
         {
             get
             {
+                if (IsAllShopsSelected) return AllShops;
                 var shop = Find(_currentSubdomain);
                 return shop ?? _shops[0];
             }
         }
 
-        public bool IsDefaultShopSelected => IsDefault(CurrentShop.subdomain);
+        public bool IsAllShopsSelected => string.IsNullOrEmpty(_currentSubdomain);
+
+        public bool IsDefaultShopSelected => !IsAllShopsSelected && IsDefault(CurrentShop.subdomain);
 
         public ShopManager()
         {
@@ -71,9 +77,11 @@ namespace Dennokoworks.ToolImporter.Editor
             return null;
         }
 
+        /// <summary>ショップを選択する。null / 空文字なら None（全ショップ）。</summary>
         public void Select(string subdomain)
         {
-            if (Find(subdomain) == null) return;
+            subdomain = subdomain ?? string.Empty;
+            if (subdomain.Length > 0 && Find(subdomain) == null) return;
             _currentSubdomain = subdomain;
             EditorPrefs.SetString(CurrentPrefKey, subdomain);
             Changed?.Invoke();
@@ -156,7 +164,7 @@ namespace Dennokoworks.ToolImporter.Editor
             _shops.Insert(0, def ?? new ShopInfo(DefaultSubdomain, "dennokoworks"));
 
             _currentSubdomain = EditorPrefs.GetString(CurrentPrefKey, DefaultSubdomain);
-            if (Find(_currentSubdomain) == null) _currentSubdomain = DefaultSubdomain;
+            if (!IsAllShopsSelected && Find(_currentSubdomain) == null) _currentSubdomain = DefaultSubdomain;
         }
     }
 }

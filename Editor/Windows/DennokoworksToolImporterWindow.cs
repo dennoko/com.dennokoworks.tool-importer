@@ -24,6 +24,9 @@ namespace Dennokoworks.ToolImporter.Editor
         private MessageType _loadErrorType = MessageType.Warning;
 
         private readonly List<ToolItemState> _items = new List<ToolItemState>();
+        /// <summary>.unitypackage が無いため一覧から除外したアイテム数と、そのうち zip があるもの。</summary>
+        private int _hiddenItemCount;
+        private int _hiddenArchiveCount;
         private readonly List<LocalToolVersion> _localTools = new List<LocalToolVersion>();
         private readonly List<LocalToolVersion> _localOnlyTools = new List<LocalToolVersion>();
 
@@ -146,6 +149,9 @@ namespace Dennokoworks.ToolImporter.Editor
                 _showSettings = true;
             }
 
+            // .unitypackage を含まないアイテム（未ダウンロード・zip 未展開・Unity 用でないもの）は表示しない
+            _hiddenItemCount = 0;
+            _hiddenArchiveCount = 0;
             foreach (var item in items)
             {
                 var state = new ToolItemState { Item = item };
@@ -153,7 +159,12 @@ namespace Dennokoworks.ToolImporter.Editor
                 {
                     state.DirectoryExists = true;
                     state.Packages = PackageImporter.FindUnityPackages(item.ItemDirectory);
-                    state.HasArchive = HasArchive(item.ItemDirectory);
+                }
+                if (state.LatestPackage == null)
+                {
+                    _hiddenItemCount++;
+                    if (state.DirectoryExists && HasArchive(item.ItemDirectory)) _hiddenArchiveCount++;
+                    continue;
                 }
                 _items.Add(state);
             }
@@ -408,14 +419,18 @@ namespace Dennokoworks.ToolImporter.Editor
                 GUILayout.Label("ショップ:", EditorStyles.miniLabel, GUILayout.ExpandWidth(false));
 
                 var current = _shopManager.CurrentShop;
+                bool allShops = _shopManager.IsAllShopsSelected;
                 if (GUILayout.Button(current.Label, EditorStyles.toolbarDropDown, GUILayout.MinWidth(140)))
                 {
                     var menu = new GenericMenu();
+                    menu.AddItem(new GUIContent($"{ShopManager.AllShops.Label}  (すべてのショップ)"), allShops,
+                        () => _shopManager.Select(null));
+                    menu.AddSeparator("");
                     foreach (var shop in _shopManager.Shops)
                     {
                         var subdomain = shop.subdomain;
                         menu.AddItem(new GUIContent($"{shop.Label}  ({shop.subdomain})"),
-                            string.Equals(subdomain, current.subdomain, StringComparison.OrdinalIgnoreCase),
+                            !allShops && string.Equals(subdomain, current.subdomain, StringComparison.OrdinalIgnoreCase),
                             () => _shopManager.Select(subdomain));
                     }
                     menu.AddSeparator("");
@@ -645,11 +660,19 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private void DrawItemList()
         {
-            var shopLabel = _shopManager.CurrentShop.Label;
+            bool allShops = _shopManager.IsAllShopsSelected;
+            var shopLabel = allShops ? "すべてのショップ" : _shopManager.CurrentShop.Label;
             int scanning = PackageImporter.PendingCount;
             var header = $"アイテム一覧 ({shopLabel}): {_items.Count} 件";
             if (scanning > 0) header += $"  - パッケージ解析中 ({scanning})";
             EditorGUILayout.LabelField(header, EditorStyles.boldLabel);
+
+            if (_hiddenItemCount > 0)
+            {
+                var hidden = $".unitypackage が見つからないアイテム {_hiddenItemCount} 件は表示していません（未ダウンロード・Unity 用以外など）。";
+                if (_hiddenArchiveCount > 0) hidden += $"\nうち {_hiddenArchiveCount} 件は zip が未展開の可能性があります。BLM で展開してから「一覧を再読み込み」を押してください。";
+                EditorGUILayout.LabelField(hidden, _wrappedMiniStyle);
+            }
 
             using (var scroll = new EditorGUILayout.ScrollViewScope(_scrollPosition))
             {
@@ -657,8 +680,9 @@ namespace Dennokoworks.ToolImporter.Editor
 
                 if (_items.Count == 0 && string.IsNullOrEmpty(_loadError))
                 {
+                    var target = allShops ? "BLM に" : $"BLM の「{shopLabel}」に";
                     EditorGUILayout.HelpBox(
-                        $"BLM に「{shopLabel}」のアイテムが登録されていません。\nBLM でアイテムを追加・ダウンロードしてから「一覧を再読み込み」を押してください。",
+                        $"{target}インポートできるアイテム（.unitypackage）がありません。\nBLM でアイテムを追加・ダウンロードしてから「一覧を再読み込み」を押してください。",
                         MessageType.Info);
                 }
 
@@ -704,10 +728,10 @@ namespace Dennokoworks.ToolImporter.Editor
                 {
                     EditorGUILayout.LabelField(item.Name, _itemNameStyle);
 
-                    var status = GetStatusText(state);
-                    if (!string.IsNullOrEmpty(status))
+                    // None（全ショップ）表示時はどのショップのアイテムか分かるようにする
+                    if (_shopManager.IsAllShopsSelected && !string.IsNullOrEmpty(item.ShopSubdomain))
                     {
-                        EditorGUILayout.LabelField(status, _wrappedMiniStyle);
+                        EditorGUILayout.LabelField(GetShopLabel(item.ShopSubdomain), _wrappedMiniStyle);
                     }
 
                     // 複数パッケージがあるアイテムは、まとめてインポートで入るファイルを常に明示する
@@ -751,15 +775,11 @@ namespace Dennokoworks.ToolImporter.Editor
             else EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.2f));
         }
 
-        private static string GetStatusText(ToolItemState state)
+        /// <summary>登録済みショップなら表示名、それ以外はサブドメインを返す。</summary>
+        private string GetShopLabel(string subdomain)
         {
-            if (state.LatestPackage == null)
-            {
-                if (!state.DirectoryExists) return "未ダウンロード（BLM でダウンロードしてください）";
-                if (state.HasArchive) return ".unitypackage が見つかりません（zip が未展開の可能性があります）";
-                return ".unitypackage が見つかりません";
-            }
-            return null;
+            var shop = _shopManager.Find(subdomain);
+            return shop != null && shop.Label != subdomain ? $"{shop.Label} ({subdomain})" : subdomain;
         }
 
         private void DrawVersionInfo(ToolItemState state)

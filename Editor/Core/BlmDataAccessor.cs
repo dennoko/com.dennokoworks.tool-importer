@@ -108,18 +108,22 @@ namespace Dennokoworks.ToolImporter.Editor
         }
 
         /// <summary>指定ショップの登録アイテム一覧。ユーザーが上書きした名前があればそちらを使う。</summary>
+        /// <param name="shopSubdomain">null / 空文字なら全ショップのアイテムを返す。</param>
         public static List<BlmItem> GetItemsByShop(string dbPath, string itemRoot, string shopSubdomain)
         {
-            const string sql =
+            const string select =
                 "SELECT r.id, b.id, COALESCE(NULLIF(o.name, ''), b.name), b.shop_subdomain, b.thumbnail_url " +
                 "FROM registered_items r " +
                 "JOIN booth_items b ON r.booth_item_id = b.id " +
-                "LEFT JOIN overwritten_booth_items o ON o.booth_item_id = b.id " +
-                "WHERE b.shop_subdomain = ? " +
-                "ORDER BY b.published_at DESC";
+                "LEFT JOIN overwritten_booth_items o ON o.booth_item_id = b.id ";
+            const string order = "ORDER BY b.published_at DESC";
+
+            var rows = string.IsNullOrEmpty(shopSubdomain)
+                ? Query(dbPath, select + order)
+                : Query(dbPath, select + "WHERE b.shop_subdomain = ? " + order, shopSubdomain);
 
             var result = new List<BlmItem>();
-            foreach (var row in Query(dbPath, sql, shopSubdomain))
+            foreach (var row in rows)
             {
                 var registeredId = row[0] as string;
                 if (string.IsNullOrEmpty(registeredId)) continue;

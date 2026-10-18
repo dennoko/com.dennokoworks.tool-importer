@@ -38,11 +38,40 @@ namespace Dennokoworks.ToolImporter.Editor
                 return;
             }
 
+            DrawDefaultShopSelector();
             DrawRegisteredShops();
             EditorGUILayout.Space(8);
             DrawBlmShops();
             EditorGUILayout.Space(8);
             DrawManualInput();
+        }
+
+        private void DrawDefaultShopSelector()
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("起動時のデフォルトショップ", EditorStyles.boldLabel);
+                var options = new List<string> { "None（すべてのショップを表示）" };
+                var values = new List<string> { string.Empty };
+                int currentIndex = 0;
+                for (int i = 0; i < _shopManager.Shops.Count; i++)
+                {
+                    var s = _shopManager.Shops[i];
+                    options.Add($"{s.Label}  ({s.subdomain})");
+                    values.Add(s.subdomain);
+                    if (_shopManager.IsDefaultShop(s.subdomain))
+                    {
+                        currentIndex = i + 1;
+                    }
+                }
+
+                int selectedIndex = EditorGUILayout.Popup("デフォルト:", currentIndex, options.ToArray());
+                if (selectedIndex != currentIndex)
+                {
+                    _shopManager.DefaultShopSubdomain = values[selectedIndex];
+                }
+            }
+            EditorGUILayout.Space(4);
         }
 
         private void DrawRegisteredShops()
@@ -57,21 +86,35 @@ namespace Dennokoworks.ToolImporter.Editor
                 {
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        bool isDefault = ShopManager.IsDefault(shop.subdomain);
-                        using (new EditorGUI.DisabledScope(isDefault))
+                        bool isBuiltin = ShopManager.IsBuiltin(shop.subdomain);
+                        bool isDefault = _shopManager.IsDefaultShop(shop.subdomain);
+
+                        using (new EditorGUI.DisabledScope(isBuiltin))
                         {
-                            var newName = EditorGUILayout.DelayedTextField(shop.displayName ?? "", GUILayout.MinWidth(120));
+                            var newName = EditorGUILayout.DelayedTextField(shop.displayName ?? "", GUILayout.MinWidth(110));
                             if (newName != (shop.displayName ?? "")) _shopManager.UpdateShop(shop.subdomain, newName);
                         }
 
-                        EditorGUILayout.LabelField(shop.subdomain, EditorStyles.miniLabel, GUILayout.MinWidth(80));
+                        EditorGUILayout.LabelField(shop.subdomain, EditorStyles.miniLabel, GUILayout.MinWidth(70));
 
-                        if (GUILayout.Button("開く", EditorStyles.miniButtonLeft, GUILayout.Width(40)))
+                        if (isDefault)
+                        {
+                            GUILayout.Label("[既定]", EditorStyles.miniBoldLabel, GUILayout.Width(38));
+                        }
+                        else
+                        {
+                            if (GUILayout.Button("既定", EditorStyles.miniButton, GUILayout.Width(38)))
+                            {
+                                _shopManager.DefaultShopSubdomain = shop.subdomain;
+                            }
+                        }
+
+                        if (GUILayout.Button("開く", EditorStyles.miniButtonLeft, GUILayout.Width(38)))
                             Application.OpenURL(shop.ShopUrl);
 
-                        using (new EditorGUI.DisabledScope(isDefault))
+                        using (new EditorGUI.DisabledScope(isBuiltin))
                         {
-                            if (GUILayout.Button("削除", EditorStyles.miniButtonRight, GUILayout.Width(40)))
+                            if (GUILayout.Button("削除", EditorStyles.miniButtonRight, GUILayout.Width(38)))
                                 toRemove = shop;
                         }
                     }
@@ -83,7 +126,7 @@ namespace Dennokoworks.ToolImporter.Editor
                     _shopManager.RemoveShop(toRemove.subdomain);
                 }
             }
-            EditorGUILayout.LabelField("表示名は入力後 Enter で保存されます。dennokoworks は削除できません。", EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField("表示名は入力後 Enter で保存されます。dennokoworks は登録解除できません。", EditorStyles.wordWrappedMiniLabel);
         }
 
         private void DrawBlmShops()

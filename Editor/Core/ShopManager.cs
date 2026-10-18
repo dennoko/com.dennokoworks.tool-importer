@@ -7,14 +7,17 @@ namespace Dennokoworks.ToolImporter.Editor
 {
     /// <summary>
     /// 表示対象ショップの登録・切り替えを管理し、EditorPrefs（ユーザー単位・全プロジェクト共通）に保存する。
-    /// デフォルトの dennokoworks は常に先頭に存在し、削除できない。
+    /// 初期登録ショップの dennokoworks は常にリストに存在し、削除できない。
+    /// 起動時のデフォルト選択は None（全ショップ表示）であり、ショップ管理から変更できる。
     /// </summary>
     internal sealed class ShopManager
     {
-        public const string DefaultSubdomain = "dennokoworks";
+        public const string BuiltinSubdomain = "dennokoworks";
+        public const string DefaultSubdomain = BuiltinSubdomain; // 後方互換用エイリアス
 
         private const string ShopsPrefKey = "Dennokoworks.ToolImporter.Shops";
         private const string CurrentPrefKey = "Dennokoworks.ToolImporter.CurrentShop";
+        private const string DefaultShopPrefKey = "Dennokoworks.ToolImporter.DefaultShop";
 
         [Serializable]
         private class ShopList
@@ -23,7 +26,8 @@ namespace Dennokoworks.ToolImporter.Editor
         }
 
         private readonly List<ShopInfo> _shops = new List<ShopInfo>();
-        private string _currentSubdomain = DefaultSubdomain;
+        private string _currentSubdomain = string.Empty; // デフォルトは None
+        private string _defaultSubdomain = string.Empty; // デフォルトは None
 
         public event Action Changed;
 
@@ -32,27 +36,50 @@ namespace Dennokoworks.ToolImporter.Editor
         /// <summary>ショップで絞り込まない（全ショップのアイテムを表示する）選択肢。subdomain は空。</summary>
         public static readonly ShopInfo AllShops = new ShopInfo(string.Empty, "None");
 
+        /// <summary>起動時に選択されるデフォルトのショップ（空文字なら None）。</summary>
+        public string DefaultShopSubdomain
+        {
+            get => _defaultSubdomain;
+            set
+            {
+                var val = value ?? string.Empty;
+                if (_defaultSubdomain == val) return;
+                _defaultSubdomain = val;
+                EditorPrefs.SetString(DefaultShopPrefKey, _defaultSubdomain);
+                Changed?.Invoke();
+            }
+        }
+
         public ShopInfo CurrentShop
         {
             get
             {
                 if (IsAllShopsSelected) return AllShops;
                 var shop = Find(_currentSubdomain);
-                return shop ?? _shops[0];
+                return shop ?? AllShops;
             }
         }
 
         public bool IsAllShopsSelected => string.IsNullOrEmpty(_currentSubdomain);
 
-        public bool IsDefaultShopSelected => !IsAllShopsSelected && IsDefault(CurrentShop.subdomain);
+        /// <summary>現在 dennokoworks が選択されているか（バージョン確認等の対象）。</summary>
+        public bool IsDennokoworksSelected => !IsAllShopsSelected && IsBuiltin(CurrentShop.subdomain);
+
+        /// <summary>現在、ユーザーが設定したデフォルトショップが選択されているか。</summary>
+        public bool IsDefaultShopSelected => IsDefaultShop(_currentSubdomain);
 
         public ShopManager()
         {
             Load();
         }
 
-        public static bool IsDefault(string subdomain)
-            => string.Equals(subdomain, DefaultSubdomain, StringComparison.OrdinalIgnoreCase);
+        public static bool IsBuiltin(string subdomain)
+            => string.Equals(subdomain, BuiltinSubdomain, StringComparison.OrdinalIgnoreCase);
+
+        public static bool IsDefault(string subdomain) => IsBuiltin(subdomain);
+
+        public bool IsDefaultShop(string subdomain)
+            => string.Equals(subdomain ?? string.Empty, _defaultSubdomain ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>BOOTH の URL などが入力された場合もサブドメインに正規化する。</summary>
         public static string NormalizeSubdomain(string input)
@@ -115,14 +142,17 @@ namespace Dennokoworks.ToolImporter.Editor
 
         public void RemoveShop(string subdomain)
         {
-            if (IsDefault(subdomain)) return;
+            if (IsBuiltin(subdomain)) return;
             var shop = Find(subdomain);
             if (shop == null) return;
             _shops.Remove(shop);
+            if (string.Equals(_defaultSubdomain, subdomain, StringComparison.OrdinalIgnoreCase))
+            {
+                DefaultShopSubdomain = string.Empty;
+            }
             if (string.Equals(_currentSubdomain, subdomain, StringComparison.OrdinalIgnoreCase))
             {
-                _currentSubdomain = DefaultSubdomain;
-                EditorPrefs.SetString(CurrentPrefKey, _currentSubdomain);
+                Select(_defaultSubdomain);
             }
             Save();
         }
@@ -158,13 +188,23 @@ namespace Dennokoworks.ToolImporter.Editor
                 }
             }
 
-            // デフォルトショップは常に先頭
-            var def = Find(DefaultSubdomain);
+            // 初期登録ショップ（dennokoworks）は常に先頭に存在
+            var def = Find(BuiltinSubdomain);
             if (def != null) _shops.Remove(def);
-            _shops.Insert(0, def ?? new ShopInfo(DefaultSubdomain, "dennokoworks"));
+            _shops.Insert(0, def ?? new ShopInfo(BuiltinSubdomain, "dennokoworks"));
 
-            _currentSubdomain = EditorPrefs.GetString(CurrentPrefKey, DefaultSubdomain);
-            if (!IsAllShopsSelected && Find(_currentSubdomain) == null) _currentSubdomain = DefaultSubdomain;
+            _defaultSubdomain = EditorPrefs.GetString(DefaultShopPrefKey, string.Empty);
+            if (!string.IsNullOrEmpty(_defaultSubdomain) && Find(_defaultSubdomain) == null)
+            {
+                _defaultSubdomain = string.Empty;
+            }
+
+            // 起動時のショップ選択: 設定が無ければデフォルトショップ（初期値: None）を選択
+            _currentSubdomain = EditorPrefs.GetString(CurrentPrefKey, _defaultSubdomain);
+            if (!IsAllShopsSelected && Find(_currentSubdomain) == null)
+            {
+                _currentSubdomain = _defaultSubdomain;
+            }
         }
     }
 }

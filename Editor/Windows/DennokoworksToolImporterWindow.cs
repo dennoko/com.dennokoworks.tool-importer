@@ -115,7 +115,7 @@ namespace Dennokoworks.ToolImporter.Editor
             Repaint();
         }
 
-        private bool IsDennokoworks => _shopManager.IsDefaultShopSelected;
+        private bool IsDennokoworks => _shopManager.IsDennokoworksSelected;
 
         #region Data loading
 
@@ -685,15 +685,27 @@ namespace Dennokoworks.ToolImporter.Editor
             bool allShops = _shopManager.IsAllShopsSelected;
             var shopLabel = allShops ? "すべてのショップ" : _shopManager.CurrentShop.Label;
             int scanning = PackageImporter.PendingCount;
-            var header = $"アイテム一覧 ({shopLabel}): {_items.Count} 件";
-            if (scanning > 0) header += $"  - パッケージ解析中 ({scanning})";
-            EditorGUILayout.LabelField(header, EditorStyles.boldLabel);
-
-            if (_hiddenItemCount > 0)
+            using (new EditorGUILayout.HorizontalScope())
             {
-                var hidden = $".unitypackage が見つからないアイテム {_hiddenItemCount} 件は表示していません（未ダウンロード・Unity 用以外など）。";
-                if (_hiddenArchiveCount > 0) hidden += $"\nうち {_hiddenArchiveCount} 件は zip が未展開の可能性があります。BLM で展開してから「一覧を再読み込み」を押してください。";
-                EditorGUILayout.LabelField(hidden, _wrappedMiniStyle);
+                var header = $"アイテム一覧 ({shopLabel}): {_items.Count} 件";
+                if (scanning > 0) header += $"  - パッケージ解析中 ({scanning})";
+                EditorGUILayout.LabelField(header, EditorStyles.boldLabel, GUILayout.ExpandWidth(false));
+
+                if (_hiddenItemCount > 0)
+                {
+                    var tooltip = $".unitypackage が見つからないアイテム {_hiddenItemCount} 件は表示していません（未ダウンロード・Unity 用以外など）。";
+                    if (_hiddenArchiveCount > 0)
+                        tooltip += $"\nうち {_hiddenArchiveCount} 件は zip が未展開の可能性があります。BLM で展開してから「一覧を再読み込み」を押してください。";
+
+                    var iconContent = EditorGUIUtility.IconContent("console.warnicon.sml");
+                    if (iconContent == null || iconContent.image == null)
+                        iconContent = EditorGUIUtility.IconContent("console.infoicon");
+
+                    var warnContent = new GUIContent(iconContent.image, tooltip);
+                    GUILayout.Label(warnContent, GUILayout.Width(20), GUILayout.Height(EditorGUIUtility.singleLineHeight));
+                }
+
+                GUILayout.FlexibleSpace();
             }
 
             using (var scroll = new EditorGUILayout.ScrollViewScope(_scrollPosition))

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BLM の `data.db` を OS 同梱 SQLite（読み取り専用）で読み込み、アイテム保存先・ショップ・アイテムを取得
 - ショップの切り替え・追加・表示名編集・削除（`EditorPrefs` に保存）。`None` で全ショップのアイテムを表示
 - `.unitypackage` が無いアイテムを一覧から除外（除外件数を表示）
+- 一覧の仮想スクロール（表示範囲と上下数行だけ描画し、他は高さぶんの空白で置き換え）とサムネイルの取得取り消し・上限付きキャッシュ
 - `.unitypackage` の再帰探索・バージョン順の並べ替え・複数パッケージの選択インポート（インポートボタンからパッケージ一覧を表示し、チェックボックスで選択）
 - `.unitypackage` の GUID 解析による導入状況の判定（`Library/` にキャッシュ）
 - dennokoworks 製ツールのプロジェクト内 / BLM 内 / 公開中の最新バージョン比較による更新通知

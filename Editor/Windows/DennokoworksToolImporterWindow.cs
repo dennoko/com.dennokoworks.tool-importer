@@ -48,6 +48,25 @@ namespace Dennokoworks.ToolImporter.Editor
         private string _search = "";
         private Vector2 _scrollPosition;
 
+        // 一覧の仮想スクロール。IMGUI は描画のたびに全行を処理するため、表示範囲とその上下の数行だけ描き、
+        // それ以外の行は推定の高さぶんの空白で置き換えて、上から下まで一続きにスクロールできるようにする。
+        /// <summary>表示範囲の上下に余分に描く行数。</summary>
+        private const int OverscanRows = 8;
+        /// <summary>まだ描いたことのない行の高さの初期推定値。</summary>
+        private const float DefaultRowHeight = 84f;
+
+        /// <summary>検索に一致したアイテム（Layout イベントでのみ作り直す）。</summary>
+        private readonly List<ToolItemState> _visibleItems = new List<ToolItemState>();
+        /// <summary>実際に描いて測った行の高さ（次の行までの間隔）。RegisteredId → 高さ。</summary>
+        private readonly Dictionary<string, float> _rowHeights = new Dictionary<string, float>();
+        private float _rowHeightSum;
+        /// <summary>描画する行の範囲 [_rangeStart, _rangeEnd) と、その上下に置く空白の高さ。</summary>
+        private int _rangeStart;
+        private int _rangeEnd;
+        private float _spaceAbove;
+        private float _spaceBelow;
+        private readonly List<Rect> _drawnRowRects = new List<Rect>();
+
         private GUIStyle _itemNameStyle;
         private GUIStyle _wrappedMiniStyle;
 
@@ -104,6 +123,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private void Reload()
         {
             _items.Clear();
+            _scrollPosition = Vector2.zero;
             _loadError = null;
             _loadErrorType = MessageType.Warning;
             _dbPath = null;
@@ -546,7 +566,9 @@ namespace Dennokoworks.ToolImporter.Editor
 
             using (new EditorGUILayout.HorizontalScope())
             {
+                EditorGUI.BeginChangeCheck();
                 _search = EditorGUILayout.TextField("検索", _search);
+                if (EditorGUI.EndChangeCheck()) _scrollPosition = Vector2.zero;
 
                 EditorGUI.BeginChangeCheck();
                 _multiSelect = EditorGUILayout.ToggleLeft("複数選択モード", _multiSelect, GUILayout.Width(110));
@@ -686,14 +708,103 @@ namespace Dennokoworks.ToolImporter.Editor
                         MessageType.Info);
                 }
 
-                foreach (var state in _items)
+                // 描画範囲は Layout イベントでだけ決め、同じフレームの他のイベントでも同じ行を描く
+                // （イベントごとに行が変わると IMGUI のレイアウトが食い違うため）
+                if (Event.current.type == EventType.Layout) UpdateVisibleRange();
+
+                int end = Math.Min(_rangeEnd, _visibleItems.Count);
+                bool repaint = Event.current.type == EventType.Repaint;
+                if (repaint) _drawnRowRects.Clear();
+
+                if (_spaceAbove > 0) GUILayout.Space(_spaceAbove);
+                for (int i = _rangeStart; i < end; i++)
                 {
-                    if (!MatchesSearch(state.Item.Name)) continue;
-                    DrawItem(state);
+                    DrawItem(_visibleItems[i]);
+                    if (repaint) _drawnRowRects.Add(GUILayoutUtility.GetLastRect());
                 }
+                if (_spaceBelow > 0) GUILayout.Space(_spaceBelow);
+
+                if (repaint) MeasureDrawnRows(end);
 
                 if (IsDennokoworks && _localOnlyTools.Count > 0) DrawLocalOnlyTools();
             }
+        }
+
+        private float GetRowHeight(ToolItemState state)
+        {
+            if (_rowHeights.TryGetValue(state.Item.RegisteredId, out var h)) return h;
+            return _rowHeights.Count > 0 ? _rowHeightSum / _rowHeights.Count : DefaultRowHeight;
+        }
+
+        /// <summary>スクロール位置から、描画する行の範囲と上下の空白の高さを決める。</summary>
+        private void UpdateVisibleRange()
+        {
+            _visibleItems.Clear();
+            foreach (var state in _items)
+            {
+                if (MatchesSearch(state.Item.Name)) _visibleItems.Add(state);
+            }
+
+            // スクロールビューの高さはこの時点では分からないため、ウィンドウの高さで代用する（多めに描くだけ）
+            float viewTop = _scrollPosition.y;
+            float viewBottom = viewTop + position.height;
+
+            int count = _visibleItems.Count;
+            int first = count, last = -1;
+            float y = 0;
+            for (int i = 0; i < count; i++)
+            {
+                float h = GetRowHeight(_visibleItems[i]);
+                if (first == count && y + h > viewTop) first = i;
+                if (y < viewBottom) last = i;
+                y += h;
+            }
+            if (first == count) first = Math.Max(0, count - 1); // スクロール位置が末尾より下（絞り込み直後など）
+
+            _rangeStart = Math.Max(0, first - OverscanRows);
+            _rangeEnd = Math.Min(count, Math.Max(last, first) + 1 + OverscanRows);
+
+            _spaceAbove = 0;
+            _spaceBelow = 0;
+            for (int i = 0; i < _rangeStart; i++) _spaceAbove += GetRowHeight(_visibleItems[i]);
+            for (int i = _rangeEnd; i < count; i++) _spaceBelow += GetRowHeight(_visibleItems[i]);
+        }
+
+        /// <summary>
+        /// 描いた行の実際の高さを記録する。推定と違った場合は空白の高さを直すため再描画し、
+        /// 表示範囲より上の行の高さが変わったぶんはスクロール位置を補正して表示がずれないようにする。
+        /// </summary>
+        private void MeasureDrawnRows(int end)
+        {
+            int n = _drawnRowRects.Count;
+            if (n == 0 || n != end - _rangeStart) return;
+
+            var margin = EditorStyles.helpBox.margin;
+            float lastGap = Mathf.Max(margin.top, margin.bottom);
+            float scrollCorrection = 0;
+            bool changed = false;
+
+            for (int k = 0; k < n; k++)
+            {
+                var rect = _drawnRowRects[k];
+                float measured = k + 1 < n ? _drawnRowRects[k + 1].y - rect.y : rect.height + lastGap;
+                if (measured <= 0) continue;
+
+                var id = _visibleItems[_rangeStart + k].Item.RegisteredId;
+                bool known = _rowHeights.TryGetValue(id, out var previous);
+                float estimate = known ? previous : GetRowHeight(_visibleItems[_rangeStart + k]);
+                if (known && Mathf.Abs(measured - previous) < 0.5f) continue;
+
+                _rowHeightSum += measured - (known ? previous : 0);
+                _rowHeights[id] = measured;
+                changed |= Mathf.Abs(measured - estimate) >= 0.5f || !known;
+
+                // 表示範囲より完全に上にある行が伸び縮みしたら、見えている内容が動かないようスクロールを補正
+                if (rect.y + measured <= _scrollPosition.y) scrollCorrection += measured - estimate;
+            }
+
+            if (scrollCorrection != 0) _scrollPosition.y = Mathf.Max(0, _scrollPosition.y + scrollCorrection);
+            if (changed) Repaint();
         }
 
         private bool MatchesSearch(string text)

@@ -18,8 +18,8 @@ namespace Dennokoworks.ToolImporter.Editor
     {
         private const string SessionKey = "Dennokoworks.ToolImporter.ImportQueue";
 
-        /// <summary>インポート完了イベントが来ないまま待ち続けないための上限（秒）。</summary>
-        private const double StartTimeoutSeconds = 120;
+        /// <summary>非対話インポート時、完了イベントが来ない場合にアイドル状態で待つ秒数。</summary>
+        private const double NonInteractiveTimeoutSeconds = 5.0;
 
         [Serializable]
         internal class Entry
@@ -46,6 +46,7 @@ namespace Dennokoworks.ToolImporter.Editor
         }
 
         private static State _state;
+        private static bool _resumedFromDomainReload;
 
         /// <summary>キューの状態が変わったとき呼ばれる（表示更新用）。</summary>
         public static event Action Changed;
@@ -57,6 +58,22 @@ namespace Dennokoworks.ToolImporter.Editor
             AssetDatabase.importPackageCancelled += OnCancelled;
             AssetDatabase.importPackageFailed += OnFailed;
             EditorApplication.update += Update;
+
+            // スクリプトを含むパッケージのインポートでドメインリロードが発生した場合、
+            // SessionState に current が残っていれば、そのパッケージのインポートが完了してリロードされたと判定する
+            var json = SessionState.GetString(SessionKey, "");
+            if (!string.IsNullOrEmpty(json))
+            {
+                try
+                {
+                    var s = JsonUtility.FromJson<State>(json);
+                    if (s != null && s.current != null)
+                    {
+                        _resumedFromDomainReload = true;
+                    }
+                }
+                catch (Exception) { }
+            }
         }
 
         private static State Current
@@ -148,15 +165,25 @@ namespace Dennokoworks.ToolImporter.Editor
         {
             var state = Current;
 
+            // ドメインリロードを跨いだ場合: スクリプトのコンパイル・アセット更新が落ち着いた時点で
+            // リロードを引き起こした current のインポートは完了している。
+            if (_resumedFromDomainReload)
+            {
+                if (EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+                _resumedFromDomainReload = false;
+                Debug.Log($"[Tool Importer] ドメインリロード完了を検知しました: {state.current?.label} の完了を処理してキューを継続します。");
+                MarkCurrentDone(succeeded: true);
+                return;
+            }
+
             if (state.current != null)
             {
-                // 非対話インポートで開始通知が無いまま一定時間経ち、Unity も何もしていなければ完了扱いで次へ進む。
-                // 対話モードはユーザーがダイアログを開いたままの可能性があるので待ち続ける（手動スキップ可）
+                // 非対話インポート時、完了イベントが来なくても Unity がアイドル状態になって一定時間経過していれば完了とみなす
                 bool idle = !EditorApplication.isCompiling && !EditorApplication.isUpdating;
-                if (!state.interactive && !state.currentStarted && idle
-                    && EditorApplication.timeSinceStartup - state.currentStartedAt > StartTimeoutSeconds)
+                if (!state.interactive && idle
+                    && EditorApplication.timeSinceStartup - state.currentStartedAt > NonInteractiveTimeoutSeconds)
                 {
-                    Debug.LogWarning($"[Tool Importer] {state.current.label} のインポート完了を確認できなかったため、次へ進みます。");
+                    Debug.LogWarning($"[Tool Importer] {state.current.label} の完了通知を受信できなかったため、完了として次へ進みます。");
                     MarkCurrentDone(succeeded: true);
                 }
                 return;

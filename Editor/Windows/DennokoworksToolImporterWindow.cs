@@ -70,8 +70,11 @@ namespace Dennokoworks.ToolImporter.Editor
         private GUIStyle _itemNameStyle;
         private GUIStyle _wrappedMiniStyle;
 
+        private const string PackageName = "com.dennokoworks.tool-importer";
+        private const string ManualRelativePath = "Docs/user_manual_ja.pdf";
+
         [MenuItem("Tools/dennokoworks/Tool Importer", false, 100)]
-        [MenuItem("Window/dennokoworks/Tool Importer", false, 2000)]
+        [MenuItem("dennokoworks/Tool Importer", false, 0)]
         public static void Open()
         {
             var window = GetWindow<DennokoworksToolImporterWindow>(WindowTitle);
@@ -462,6 +465,9 @@ namespace Dennokoworks.ToolImporter.Editor
                     OpenShopManageDialog();
 
                 GUILayout.FlexibleSpace();
+
+                if (GUILayout.Button(new GUIContent("マニュアル", "使い方マニュアル（PDF）を開きます"), EditorStyles.toolbarButton, GUILayout.ExpandWidth(false)))
+                    OpenManual();
 
                 EditorGUI.BeginChangeCheck();
                 _showSettings = GUILayout.Toggle(_showSettings, "設定", EditorStyles.toolbarButton, GUILayout.ExpandWidth(false));
@@ -1046,6 +1052,28 @@ namespace Dennokoworks.ToolImporter.Editor
                     GUI.backgroundColor = prevColor;
                 }
             }
+        }
+
+        /// <summary>パッケージ同梱の PDF マニュアルを既定のアプリ（通常はブラウザ / PDF ビューア）で開く。</summary>
+        private static void OpenManual()
+        {
+            var path = GetManualPath();
+            if (path == null || !File.Exists(path))
+            {
+                EditorUtility.DisplayDialog(WindowTitle, $"マニュアルが見つかりませんでした。\n{path ?? ManualRelativePath}", "OK");
+                return;
+            }
+            Application.OpenURL(new Uri(path).AbsoluteUri);
+        }
+
+        private static string GetManualPath()
+        {
+            // VPM / 埋め込み / ローカル参照のどの形で導入されていても、パッケージの実体の場所を引く
+            var info = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(DennokoworksToolImporterWindow).Assembly);
+            var root = info != null && !string.IsNullOrEmpty(info.resolvedPath)
+                ? info.resolvedPath
+                : Path.GetFullPath(Path.Combine("Packages", PackageName));
+            return Path.GetFullPath(Path.Combine(root, ManualRelativePath));
         }
 
         private void DrawFooter()

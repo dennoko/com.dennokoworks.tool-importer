@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- ツールバーの「マニュアル」ボタンから同梱の PDF マニュアル（`Docs/user_manual_ja.pdf`）を開く導線
 - BLM の `data.db` を OS 同梱 SQLite（読み取り専用）で読み込み、アイテム保存先・ショップ・アイテムを取得
 - ショップの切り替え・追加・表示名編集・削除（`EditorPrefs` に保存）。`None` で全ショップのアイテムを表示
 - `.unitypackage` が無いアイテムを一覧から除外（除外件数を表示）
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BLM のアイテム情報（商品 ID・ショップ）から BOOTH 商品ページを開くボタン
 
 ### Changed
+- ウィンドウを開くメニューを `Window > dennokoworks` からメニューバー直下の `dennokoworks > Tool Importer` に変更
 - プレースホルダー表示だったウィンドウを実データに対応させ、`Editor/Windows`・`Editor/Core`・`Editor/Models` に分割
 
 ## [0.1.0] - 2026-10-18

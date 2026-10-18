@@ -66,8 +66,10 @@
 Unity エディタの上部メニューバーから以下を選択します。
 
 ```text
-Tools > dennokoworks > Tool Importer
+dennokoworks > Tool Importer
 ```
+
+`Tools > dennokoworks > Tool Importer` からも開けます。ウィンドウ上部の「マニュアル」ボタンを押すと、このマニュアル（PDF）を開けます。
 
 ウィンドウが表示され、BLM ライブラリの読み込みが開始されます。
 

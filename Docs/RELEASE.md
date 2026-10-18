@@ -134,7 +134,7 @@ VPM リポジトリ配信用リポジトリ（`vpm-repos`）の **`index.json`**
 4. 一覧から `dennokoworks Tool Importer` を探し、`+` ボタンを押して追加します。
 5. プロジェクトを開き、以下を確認します：
    - コンパイルエラーなく Unity が起動すること
-   - メニューバーに `Tools > dennokoworks > Tool Importer` が表示され、ウィンドウが正常に動作すること
+   - メニューバーに `dennokoworks > Tool Importer`（および `Tools > dennokoworks > Tool Importer`）が表示され、ウィンドウが正常に動作すること
 
 ---
 

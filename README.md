@@ -25,7 +25,7 @@ BOOTH Library Manager (BLM) でダウンロードした BOOTH アイテム（`.u
 ---
 
 ## 使い方
-1. Unity メニューの `Tools > dennokoworks > Tool Importer` または `Window > dennokoworks > Tool Importer` を開きます。
+1. Unity メニューバーの `dennokoworks > Tool Importer`（または `Tools > dennokoworks > Tool Importer`）を開きます。ツールバーの「マニュアル」から使い方マニュアル（PDF）を開けます。
 2. BLM が自動検出されない場合は、ツールバーの「設定」から `data.db` とアイテム保存先フォルダを指定します。
 3. ツールバーのショップ名をクリックして表示するショップを切り替えます。`None` を選ぶとすべてのショップのアイテムを表示します。「＋ ショップ追加」でショップを追加・管理できます。
 4. 一覧から「インポート」を押すと、Unity のインポートダイアログが開きます。

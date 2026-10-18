@@ -37,7 +37,11 @@ if command -v zip >/dev/null 2>&1; then
         -x "*.vs*" \
         -x "*.idea*" \
         -x "*.zip" \
-        -x "create-release-zip.*"
+        -x "create-release-zip.*" \
+        -x "vpm-repository-template.json*" \
+        -x "Docs/RELEASE.md*" \
+        -x "Docs/Impl/*" \
+        -x "Docs/Impl.meta"
 else
     echo "zip コマンドが見つかりません。PowerShell 版 (create-release-zip.ps1) をご利用ください。" >&2
     exit 1

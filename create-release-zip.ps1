@@ -60,6 +60,15 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 # zip アーカイブ作成（ルート直下に package.json を配置）
 $zipArchive = [System.IO.Compression.ZipFile]::Open($zipFilePath, [System.IO.Compression.ZipArchiveMode]::Create)
 
+# 利用者に不要な開発用ファイル（リポジトリ設定・リリース手順・設計資料・VPM テンプレート）。
+# .meta も一緒に除外する（アセット本体の無い .meta が残ると Unity が警告を出すため）
+$excludedPaths = @(
+    '.gitignore',
+    'vpm-repository-template.json',
+    'Docs/RELEASE.md',
+    'Docs/Impl'
+)
+
 $files = Get-ChildItem -Path $repoRoot -Recurse -File | Where-Object {
     $path = $_.FullName
     if ($path -match '[\\/]\.git([\\/]|$)') { return $false }
@@ -67,6 +76,11 @@ $files = Get-ChildItem -Path $repoRoot -Recurse -File | Where-Object {
     if ($path -match '[\\/]\.idea([\\/]|$)') { return $false }
     if ($path -match 'create-release-zip') { return $false }
     if ($path -like '*.zip') { return $false }
+
+    $relative = $path.Substring($repoRoot.Length + 1).Replace("\", "/")
+    foreach ($excluded in $excludedPaths) {
+        if ($relative -eq $excluded -or $relative -eq "$excluded.meta" -or $relative.StartsWith("$excluded/")) { return $false }
+    }
     return $true
 }
 

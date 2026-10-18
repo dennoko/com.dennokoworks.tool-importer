@@ -1,0 +1,26 @@
+{
+  "$schema": "https://vpm.vrchat.com/schemas/vpm-repo.schema.json",
+  "name": "dennokoworks VPM Repository",
+  "author": "dennoko",
+  "url": "https://dennokoworks.github.io/vpm-repos/index.json",
+  "id": "com.dennokoworks.vpm-repo",
+  "packages": {
+    "com.dennokoworks.tool-importer": {
+      "versions": {
+        "0.1.0": {
+          "name": "com.dennokoworks.tool-importer",
+          "displayName": "dennokoworks Tool Importer",
+          "version": "0.1.0",
+          "description": "BOOTH Library Manager (BLM) と連携し、購入済み dennokoworks 製ツールのUnityプロジェクトへの簡単インポートおよび最新バージョン確認を行うエディタ拡張ツールです。",
+          "unity": "2022.3",
+          "author": {
+            "name": "dennoko",
+            "url": "https://dennokoworks.booth.pm/"
+          },
+          "url": "https://github.com/dennokoworks/com.dennokoworks.tool-importer/releases/download/0.1.0/com.dennokoworks.tool-importer-0.1.0.zip",
+          "zipSHA256": ""
+        }
+      }
+    }
+  }
+}

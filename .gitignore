@@ -1,0 +1,17 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Rider / VS Code / Visual Studio
+.idea/
+.vs/
+*.user
+*.userprefs
+*.pidb
+*.suo
+
+# Build artifacts
+Build/
+Builds/
+Logs/
+*.tmp

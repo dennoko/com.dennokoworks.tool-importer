@@ -651,14 +651,19 @@ namespace Dennokoworks.ToolImporter.Editor
                 using (new EditorGUILayout.VerticalScope())
                 {
                     EditorGUILayout.LabelField(item.Name, _itemNameStyle);
-                    EditorGUILayout.LabelField(GetStatusText(state), _wrappedMiniStyle);
+
+                    var status = GetStatusText(state);
+                    if (!string.IsNullOrEmpty(status))
+                    {
+                        EditorGUILayout.LabelField(status, _wrappedMiniStyle);
+                    }
 
                     if (_multiSelect
                         && _selection.TryGetValue(item.RegisteredId, out var selectedPath)
                         && state.LatestPackage != null && selectedPath != state.LatestPackage.Path)
                     {
                         var selectedPackage = state.Packages.Find(p => p.Path == selectedPath);
-                        EditorGUILayout.LabelField($"まとめてインポート対象: {selectedPackage?.RelativePath}", _wrappedMiniStyle);
+                        EditorGUILayout.LabelField($"選択中: {selectedPackage?.RelativePath}", _wrappedMiniStyle);
                     }
 
                     if (IsDennokoworks) DrawVersionInfo(state);
@@ -696,48 +701,27 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private static string GetStatusText(ToolItemState state)
         {
-            string packages = state.Packages.Count > 1 ? $"（パッケージ {state.Packages.Count} 個）" : "";
-            switch (state.InstallState)
+            if (state.LatestPackage == null)
             {
-                case InstallState.NoPackage:
-                    if (!state.DirectoryExists) return "状態: 未ダウンロード（BLM でダウンロードしてください）";
-                    if (state.HasArchive) return "状態: .unitypackage が見つかりません（zip が未展開の可能性があります）";
-                    return "状態: .unitypackage が見つかりません";
-                case InstallState.Scanning:
-                    return $"状態: パッケージを解析中...{packages}";
-                case InstallState.Unknown:
-                    return $"状態: 導入状況を判定できません{packages}";
-                case InstallState.NotInstalled:
-                    return $"状態: 未導入{packages}";
-                case InstallState.PartiallyInstalled:
-                    return $"状態: 一部導入済み ({state.InstalledRatio:P0}){packages}";
-                case InstallState.Installed:
-                    return $"状態: 導入済み{packages}";
-                default:
-                    return "";
+                if (!state.DirectoryExists) return "未ダウンロード（BLM でダウンロードしてください）";
+                if (state.HasArchive) return ".unitypackage が見つかりません（zip が未展開の可能性があります）";
+                return ".unitypackage が見つかりません";
             }
+            return null;
         }
 
         private void DrawVersionInfo(ToolItemState state)
         {
             var local = state.LocalTool;
-            var localText = local != null
-                ? DennokoVersionChecker.Display(local.Version)
-                : (state.InstallState == InstallState.Installed ? "導入済み (version.json なし)" : "未導入");
-            var line = $"プロジェクト: {localText}  |  BLM: {DennokoVersionChecker.Display(state.BlmVersion)}";
+            if (local == null || !local.HasGitHubRepo) return;
 
-            var remote = local != null && local.HasGitHubRepo
-                ? DennokoVersionChecker.GetCachedResult(local.GitHubOwner, local.GitHubRepo)
-                : null;
-            line += $"  |  最新: {GetRemoteText(remote)}";
-            EditorGUILayout.LabelField(line, _wrappedMiniStyle);
-
+            var remote = DennokoVersionChecker.GetCachedResult(local.GitHubOwner, local.GitHubRepo);
             if (remote != null && remote.state == RemoteVersionState.Success
                 && DennokoVersionChecker.IsNewer(remote.version, local.Version)
                 && (string.IsNullOrEmpty(state.BlmVersion) || DennokoVersionChecker.IsNewer(remote.version, state.BlmVersion)))
             {
                 EditorGUILayout.HelpBox(
-                    $"新しいバージョン {DennokoVersionChecker.Display(remote.version)} が公開されています。BLM で最新版をダウンロードしてから「一覧を再読み込み」を押してください。"
+                    $"新しいバージョン {DennokoVersionChecker.Display(remote.version)} があります。BLM でダウンロードしてください。"
                     + (string.IsNullOrEmpty(remote.message) ? "" : $"\n{remote.message}"),
                     MessageType.Info);
 
@@ -751,18 +735,6 @@ namespace Dennokoworks.ToolImporter.Editor
                             Application.OpenURL(boothUrl);
                     }
                 }
-            }
-        }
-
-        private static string GetRemoteText(RemoteVersionResult remote)
-        {
-            if (remote == null) return "未確認";
-            switch (remote.state)
-            {
-                case RemoteVersionState.Checking: return "確認中...";
-                case RemoteVersionState.Success: return DennokoVersionChecker.Display(remote.version);
-                case RemoteVersionState.Error: return "取得失敗";
-                default: return "未確認";
             }
         }
 
@@ -793,7 +765,7 @@ namespace Dennokoworks.ToolImporter.Editor
 
             if (hasUpdate)
             {
-                label = $"更新をインポート ({DennokoVersionChecker.Display(state.BlmVersion)})";
+                label = "更新をインポート";
                 color = UpdateColor;
             }
             else if (state.InstallState == InstallState.Installed)
@@ -803,7 +775,7 @@ namespace Dennokoworks.ToolImporter.Editor
             }
             else
             {
-                label = string.IsNullOrEmpty(state.BlmVersion) ? "インポート" : $"インポート ({DennokoVersionChecker.Display(state.BlmVersion)})";
+                label = "インポート";
                 color = ImportColor;
             }
 
@@ -850,7 +822,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private void DrawLocalOnlyTools()
         {
             EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField("その他の導入済みツール（version.json あり / BLM 未登録）", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("その他の導入済みツール", EditorStyles.boldLabel);
 
             foreach (var tool in _localOnlyTools)
             {
@@ -865,10 +837,6 @@ namespace Dennokoworks.ToolImporter.Editor
                     using (new EditorGUILayout.VerticalScope())
                     {
                         EditorGUILayout.LabelField(tool.ToolFolder, EditorStyles.boldLabel);
-                        var remoteText = tool.HasGitHubRepo ? GetRemoteText(remote) : "確認できません";
-                        EditorGUILayout.LabelField(
-                            $"プロジェクト: {DennokoVersionChecker.Display(tool.Version)}  |  最新: {remoteText}",
-                            _wrappedMiniStyle);
                         if (hasUpdate)
                         {
                             EditorGUILayout.LabelField(

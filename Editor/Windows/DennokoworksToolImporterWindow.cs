@@ -33,9 +33,15 @@ namespace Dennokoworks.ToolImporter.Editor
         private bool _statesDirty = true;
         private bool _showSettings;
         private bool _multiSelect;
-        private bool _batchInteractive;
-        /// <summary>複数選択モードで選択中のアイテム（RegisteredId → インポートするパッケージのパス）。</summary>
-        private readonly Dictionary<string, string> _selection = new Dictionary<string, string>();
+        /// <summary>複数選択モードで選択中のアイテム（RegisteredId → インポートするパッケージのパス、古い順）。</summary>
+        private readonly Dictionary<string, List<string>> _selection = new Dictionary<string, List<string>>();
+
+        /// <summary>まとめて（複数件）インポートするとき、1 件ずつインポートダイアログを表示するか。</summary>
+        internal static bool BatchInteractive
+        {
+            get => EditorPrefs.GetBool(BatchInteractivePrefKey, false);
+            set { if (value != BatchInteractive) EditorPrefs.SetBool(BatchInteractivePrefKey, value); }
+        }
         private string _search = "";
         private Vector2 _scrollPosition;
 
@@ -56,7 +62,6 @@ namespace Dennokoworks.ToolImporter.Editor
             titleContent = new GUIContent(WindowTitle);
             _showSettings = EditorPrefs.GetBool(ShowSettingsPrefKey, false);
             _multiSelect = EditorPrefs.GetBool(MultiSelectPrefKey, false);
-            _batchInteractive = EditorPrefs.GetBool(BatchInteractivePrefKey, false);
 
             _shopManager = new ShopManager();
             _shopManager.Changed += Reload;
@@ -160,27 +165,77 @@ namespace Dennokoworks.ToolImporter.Editor
         /// <summary>一覧に無くなったアイテム・存在しなくなったパッケージを選択から外す。</summary>
         private void PruneSelection()
         {
-            var valid = new Dictionary<string, string>();
+            var valid = new Dictionary<string, List<string>>();
             foreach (var state in _items)
             {
-                if (!_selection.TryGetValue(state.Item.RegisteredId, out var path)) continue;
-                if (state.Packages.Exists(p => p.Path == path)) valid[state.Item.RegisteredId] = path;
+                if (!_selection.TryGetValue(state.Item.RegisteredId, out var paths)) continue;
+                var remaining = paths.FindAll(path => state.Packages.Exists(p => p.Path == path));
+                if (remaining.Count > 0) valid[state.Item.RegisteredId] = remaining;
             }
             _selection.Clear();
             foreach (var kv in valid) _selection[kv.Key] = kv.Value;
         }
 
+        /// <summary>チェックを入れたときは最新パッケージを対象にする（別のパッケージはインポートボタンから選ぶ）。</summary>
         private void SetSelected(ToolItemState state, bool selected)
         {
             if (selected && state.LatestPackage != null)
             {
                 if (!_selection.ContainsKey(state.Item.RegisteredId))
-                    _selection[state.Item.RegisteredId] = state.LatestPackage.Path;
+                    _selection[state.Item.RegisteredId] = new List<string> { state.LatestPackage.Path };
             }
             else
             {
                 _selection.Remove(state.Item.RegisteredId);
             }
+        }
+
+        private void SetSelectedPackages(ToolItemState state, List<PackageFile> packages)
+        {
+            if (packages == null || packages.Count == 0)
+                _selection.Remove(state.Item.RegisteredId);
+            else
+                _selection[state.Item.RegisteredId] = packages.ConvertAll(p => p.Path);
+            Repaint();
+        }
+
+        private int SelectedPackageCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (var paths in _selection.Values) count += paths.Count;
+                return count;
+            }
+        }
+
+        /// <summary>キューやログに出すパッケージ名。</summary>
+        private static string GetPackageLabel(ToolItemState state, PackageFile package)
+        {
+            if (package == null) return state.Item.Name;
+            if (!string.IsNullOrEmpty(package.FileVersion))
+                return $"{state.Item.Name} ({DennokoVersionChecker.Display(package.FileVersion)})";
+            return state.Packages.Count > 1 ? $"{state.Item.Name} ({package.FileName})" : state.Item.Name;
+        }
+
+        /// <summary>
+        /// ポップアップで選んだパッケージをインポートする。1 件なら通常のインポート、
+        /// 複数件ならキューで順番にインポートする。packages は古い順。
+        /// </summary>
+        private void ImportPackages(ToolItemState state, List<PackageFile> packages)
+        {
+            if (packages == null || packages.Count == 0) return;
+            if (ImportQueue.IsBusy) return;
+
+            if (packages.Count == 1)
+            {
+                var path = packages[0].Path;
+                EditorApplication.delayCall += () => PackageImporter.ImportPackage(path);
+                return;
+            }
+
+            var entries = packages.ConvertAll(p => new ImportQueue.Entry { label = GetPackageLabel(state, p), path = p.Path });
+            ImportQueue.Enqueue(entries, BatchInteractive);
         }
 
         private bool HasUpdate(ToolItemState state)
@@ -195,18 +250,16 @@ namespace Dennokoworks.ToolImporter.Editor
             var entries = new List<ImportQueue.Entry>();
             foreach (var state in _items)
             {
-                if (!_selection.TryGetValue(state.Item.RegisteredId, out var path)) continue;
-                var package = state.Packages.Find(p => p.Path == path);
-                var version = package?.FileVersion;
-                entries.Add(new ImportQueue.Entry
+                if (!_selection.TryGetValue(state.Item.RegisteredId, out var paths)) continue;
+                foreach (var path in paths)
                 {
-                    label = string.IsNullOrEmpty(version) ? state.Item.Name : $"{state.Item.Name} ({DennokoVersionChecker.Display(version)})",
-                    path = path,
-                });
+                    var package = state.Packages.Find(p => p.Path == path);
+                    entries.Add(new ImportQueue.Entry { label = GetPackageLabel(state, package), path = path });
+                }
             }
             if (entries.Count == 0) return;
 
-            ImportQueue.Enqueue(entries, _batchInteractive);
+            ImportQueue.Enqueue(entries, BatchInteractive);
             _selection.Clear();
         }
 
@@ -517,18 +570,17 @@ namespace Dennokoworks.ToolImporter.Editor
 
                     GUILayout.FlexibleSpace();
 
-                    EditorGUI.BeginChangeCheck();
-                    _batchInteractive = EditorGUILayout.ToggleLeft(
+                    BatchInteractive = EditorGUILayout.ToggleLeft(
                         new GUIContent("内容を確認しながら", "オンにすると 1 件ずつインポートダイアログを表示します"),
-                        _batchInteractive, GUILayout.Width(120));
-                    if (EditorGUI.EndChangeCheck()) EditorPrefs.SetBool(BatchInteractivePrefKey, _batchInteractive);
+                        BatchInteractive, GUILayout.Width(120));
                 }
 
-                using (new EditorGUI.DisabledScope(_selection.Count == 0 || ImportQueue.IsBusy))
+                int count = SelectedPackageCount;
+                using (new EditorGUI.DisabledScope(count == 0 || ImportQueue.IsBusy))
                 {
                     var prevColor = GUI.backgroundColor;
                     GUI.backgroundColor = ImportColor;
-                    if (GUILayout.Button($"まとめてインポート ({_selection.Count} 件)", GUILayout.Height(24)))
+                    if (GUILayout.Button($"まとめてインポート ({count} 件)", GUILayout.Height(24)))
                         EnqueueSelection();
                     GUI.backgroundColor = prevColor;
                 }
@@ -658,12 +710,12 @@ namespace Dennokoworks.ToolImporter.Editor
                         EditorGUILayout.LabelField(status, _wrappedMiniStyle);
                     }
 
-                    if (_multiSelect
-                        && _selection.TryGetValue(item.RegisteredId, out var selectedPath)
-                        && state.LatestPackage != null && selectedPath != state.LatestPackage.Path)
+                    // 複数パッケージがあるアイテムは、まとめてインポートで入るファイルを常に明示する
+                    if (_multiSelect && state.Packages.Count > 1
+                        && _selection.TryGetValue(item.RegisteredId, out var selectedPaths))
                     {
-                        var selectedPackage = state.Packages.Find(p => p.Path == selectedPath);
-                        EditorGUILayout.LabelField($"選択中: {selectedPackage?.RelativePath}", _wrappedMiniStyle);
+                        var names = selectedPaths.ConvertAll(path => state.Packages.Find(p => p.Path == path)?.RelativePath ?? Path.GetFileName(path));
+                        EditorGUILayout.LabelField($"まとめてインポート対象: {string.Join("、", names)}", _wrappedMiniStyle);
                     }
 
                     if (IsDennokoworks) DrawVersionInfo(state);
@@ -779,44 +831,34 @@ namespace Dennokoworks.ToolImporter.Editor
                 color = ImportColor;
             }
 
+            bool multiple = state.Packages.Count > 1;
+            var content = multiple
+                ? new GUIContent($"{label} ▾", $"含まれるパッケージ（{state.Packages.Count} 件）から選んでインポート")
+                : new GUIContent(label, latest.RelativePath);
+
             var prevColor = GUI.backgroundColor;
             GUI.backgroundColor = color;
-            bool multiple = state.Packages.Count > 1;
-            var mainStyle = multiple ? EditorStyles.miniButtonLeft : EditorStyles.miniButton;
-            if (GUILayout.Button(new GUIContent(label, latest.RelativePath), mainStyle, GUILayout.Width(ButtonWidth), GUILayout.Height(22)))
+            var rect = GUILayoutUtility.GetRect(content, EditorStyles.miniButton, GUILayout.Width(ButtonWidth), GUILayout.Height(22));
+            bool clicked = GUI.Button(rect, content, EditorStyles.miniButton);
+            GUI.backgroundColor = prevColor;
+            if (!clicked) return;
+
+            if (!multiple)
             {
                 PackageImporter.ImportPackage(latest.Path);
                 GUIUtility.ExitGUI();
+                return;
             }
-            GUI.backgroundColor = prevColor;
 
-            var dropdownTooltip = _multiSelect ? "まとめてインポートするパッケージを選択" : "インポートするパッケージを選択";
-            if (multiple && GUILayout.Button(new GUIContent("▼", dropdownTooltip), EditorStyles.miniButtonRight, GUILayout.Width(22), GUILayout.Height(22)))
-            {
-                var menu = new GenericMenu();
-                var registeredId = state.Item.RegisteredId;
-                _selection.TryGetValue(registeredId, out var selectedPath);
-                foreach (var package in state.Packages)
-                {
-                    var path = package.Path;
-                    // GenericMenu は "/" をサブメニュー区切りとして扱うため置き換える
-                    var text = package.RelativePath.Replace("/", " > ").Replace("\\", " > ");
-                    if (_multiSelect)
-                    {
-                        // 複数選択モードでは、まとめてインポートの対象パッケージを切り替える
-                        menu.AddItem(new GUIContent(text), path == selectedPath, () =>
-                        {
-                            _selection[registeredId] = path;
-                            Repaint();
-                        });
-                    }
-                    else
-                    {
-                        menu.AddItem(new GUIContent(text), false, () => PackageImporter.ImportPackage(path));
-                    }
-                }
-                menu.ShowAsContext();
-            }
+            // 複数バージョンが保存されていることが多いため、必ず一覧から入れるものを選ばせる
+            _selection.TryGetValue(state.Item.RegisteredId, out var selectedPaths);
+            var popup = new PackageSelectPopup(
+                state.Item.Name,
+                state.Packages,
+                _multiSelect ? selectedPaths : null,
+                packages => ImportPackages(state, packages),
+                _multiSelect ? packages => SetSelectedPackages(state, packages) : (Action<List<PackageFile>>)null);
+            PopupWindow.Show(rect, popup);
         }
 
         private void DrawLocalOnlyTools()

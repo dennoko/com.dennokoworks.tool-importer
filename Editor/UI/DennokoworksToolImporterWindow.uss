@@ -1,8 +1,82 @@
 /* ============================================================
    DennokoworksToolImporterWindow.uss
-   Tool Importer 固有のスタイル定義
+   Tool Importer 固有のスタイル定義 (コンパクト高密度表示)
    すべてのセレクタに .dennoko-root を前置すること。
    ============================================================ */
+
+/* ─── コンパクト表示: テーマ既定値の上書き ──────────────────
+   DennokoTheme.uss はテンプレートのまま保ち、標準コンポーネントと同等の
+   高密度・コンパクトなレイアウトを実現するためここで上書きする。 */
+.dennoko-root .unity-text-element {
+    font-size: 10.5px;
+}
+
+.dennoko-root .unity-button {
+    padding: 1px 5px;
+    margin: 1px 2px;
+}
+
+.dennoko-root .unity-button.dennoko-button-primary {
+    font-size: 11px;
+    height: 22px;
+}
+
+.dennoko-root .unity-button.dennoko-button-secondary {
+    font-size: 9.5px;
+    height: 20px;
+}
+
+.dennoko-root .unity-base-field__input {
+    padding: 1px 4px;
+    min-height: 18px;
+    font-size: 10px;
+}
+
+.dennoko-root .dennoko-card {
+    padding: 3px 5px;
+    margin: 0 3px 3px 3px;
+    border-radius: 4px;
+}
+
+.dennoko-root .dennoko-card-header {
+    padding-bottom: 2px;
+    margin-bottom: 4px;
+}
+
+.dennoko-root .dennoko-header {
+    padding: 2px 6px;
+    min-height: 22px;
+}
+
+.dennoko-root .dennoko-separator {
+    margin: 1px 0;
+}
+
+.dennoko-root .dennoko-title {
+    font-size: 12px;
+}
+
+.dennoko-root .dennoko-version-label {
+    font-size: 9px;
+    margin-left: 4px;
+}
+
+.dennoko-root .dennoko-version-reload-button {
+    font-size: 11px;
+    width: 16px;
+    height: 16px;
+    margin-left: 2px;
+}
+
+.dennoko-root .dennoko-section-title .unity-text-element {
+    font-size: 9px;
+}
+
+.dennoko-root .dennoko-status {
+    font-size: 9px;
+    padding: 1px 4px;
+    min-height: 15px;
+}
 
 /* ─── 汎用: 伸びて縮む (flex-grow と flex-shrink は必ずセット) ─ */
 .dennoko-root .dennoko-col-grow {
@@ -13,25 +87,24 @@
 
 /* ─── ヘッダー ─────────────────────────────────────────── */
 .dennoko-root .header-button {
-    height: 24px;
-    padding: 2px 8px;
-    font-size: 11px;
-    margin-left: 4px;
-    margin-right: 0;
+    height: 20px;
+    padding: 0 5px;
+    font-size: 10px;
+    margin: 1px 2px;
 }
 
 .dennoko-root .dennoko-lang-button {
-    min-width: 34px;
-    height: 22px;
-    padding: 0 6px;
-    font-size: 11px;
+    min-width: 26px;
+    height: 18px;
+    padding: 0 2px;
+    font-size: 9px;
     -unity-font-style: bold;
     color: var(--dennoko-text-primary);
     background-color: var(--dennoko-surface-2);
     border-color: var(--dennoko-outline);
     border-width: 1px;
-    border-radius: 4px;
-    margin-left: 6px;
+    border-radius: 3px;
+    margin-left: 4px;
 }
 
 .dennoko-root .dennoko-lang-button:hover {
@@ -43,11 +116,12 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 3px 8px;
+    padding: 1px 4px;
     background-color: var(--dennoko-surface-1);
     border-bottom-width: 1px;
     border-bottom-color: var(--dennoko-outline);
     flex-shrink: 0;
+    min-height: 22px;
 }
 
 .dennoko-root .shop-bar-left {
@@ -59,50 +133,53 @@
 }
 
 .dennoko-root .shop-prefix-label {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--dennoko-text-tertiary);
-    margin-right: 4px;
+    margin-right: 2px;
     flex-shrink: 0;
 }
 
 .dennoko-root .shop-select-button {
-    min-width: 110px;
-    max-width: 220px;
+    height: 20px;
+    min-width: 100px;
+    max-width: 200px;
     text-overflow: ellipsis;
     -unity-text-align: middle-left;
+    padding: 0 4px;
 }
 
 .dennoko-root .mini-icon-button {
-    min-width: 24px;
-    padding: 0 4px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 2px;
 }
 
 .dennoko-root .shop-bar-right {
     flex-direction: row;
     align-items: center;
     flex-shrink: 0;
-    margin-left: 6px;
+    margin-left: 4px;
 }
 
 /* ─── 設定カード ───────────────────────────────────────── */
 .dennoko-root .settings-card {
-    margin-top: 4px;
-    margin-bottom: 6px;
-    padding: 8px 10px;
+    margin-top: 2px;
+    margin-bottom: 4px;
+    padding: 3px 5px;
 }
 
 .dennoko-root .setting-row {
     flex-direction: row;
     align-items: center;
-    margin-top: 4px;
-    margin-bottom: 2px;
+    margin-top: 2px;
+    margin-bottom: 1px;
 }
 
 .dennoko-root .setting-label {
-    width: 130px;
-    min-width: 130px;
+    width: 110px;
+    min-width: 110px;
     color: var(--dennoko-text-secondary);
-    font-size: 11px;
+    font-size: 9.5px;
     -unity-text-align: middle-left;
 }
 
@@ -114,17 +191,17 @@
     background-color: var(--dennoko-surface-2);
     border-color: var(--dennoko-outline);
     border-width: 1px;
-    border-radius: 4px;
-    padding: 3px 6px;
-    font-size: 11px;
+    border-radius: 3px;
+    padding: 1px 3px;
+    font-size: 9.5px;
     white-space: nowrap;
 }
 
 .dennoko-root .setting-status {
-    width: 60px;
-    min-width: 60px;
-    margin-left: 6px;
-    font-size: 10px;
+    width: 50px;
+    min-width: 50px;
+    margin-left: 4px;
+    font-size: 8.5px;
     color: var(--dennoko-text-tertiary);
     -unity-text-align: middle-center;
 }
@@ -134,30 +211,31 @@
     background-color: var(--dennoko-status-error-bg);
     border-color: var(--dennoko-semantic-error);
     border-width: 1px;
-    border-radius: 6px;
-    padding: 8px 10px;
-    margin: 4px 8px;
+    border-radius: 4px;
+    padding: 3px 5px;
+    margin: 2px 4px;
     flex-shrink: 0;
 }
 
 .dennoko-root .error-banner-text {
     color: var(--dennoko-status-error-text);
-    font-size: 11px;
+    font-size: 9.5px;
     white-space: normal;
 }
 
 /* ─── キュー進行状況カード ─────────────────────────────── */
 .dennoko-root .queue-card {
-    margin-top: 4px;
-    margin-bottom: 6px;
-    padding: 8px 10px;
+    margin-top: 2px;
+    margin-bottom: 4px;
+    padding: 3px 5px;
     flex-shrink: 0;
 }
 
 .dennoko-root .queue-progress-bar {
-    height: 18px;
-    border-radius: 4px;
-    margin-bottom: 4px;
+    height: 16px;
+    border-radius: 3px;
+    margin-bottom: 3px;
+    font-size: 9.5px;
 }
 
 .dennoko-root .queue-actions-row {
@@ -168,14 +246,14 @@
 
 /* ─── 操作バー ─────────────────────────────────────────── */
 .dennoko-root .action-bar {
-    padding: 6px 8px;
+    padding: 1px 4px;
     flex-shrink: 0;
 }
 
 .dennoko-root .action-bar-row1 {
     flex-direction: row;
     align-items: center;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .dennoko-root .action-bar-row2 {
@@ -186,12 +264,43 @@
 .dennoko-root .search-field {
     flex-grow: 1;
     flex-shrink: 1;
-    margin-right: 8px;
+    margin-right: 4px;
+    margin-top: 0;
+    margin-bottom: 0;
+    font-size: 10px;
+}
+
+.dennoko-root .search-field .unity-base-field__label {
+    min-width: 28px;
+    font-size: 10px;
+    color: var(--dennoko-text-secondary);
+    padding: 0;
+    margin-right: 2px;
+}
+
+.dennoko-root .search-field .unity-base-field__input {
+    height: 19px;
+    min-height: 19px;
+    padding: 0 4px;
+    font-size: 10px;
 }
 
 .dennoko-root .multi-select-toggle {
-    margin-left: 4px;
+    margin-left: 2px;
+    margin-top: 0;
+    margin-bottom: 0;
     flex-shrink: 0;
+    font-size: 10px;
+}
+
+.dennoko-root .multi-select-toggle .unity-toggle__text {
+    font-size: 10px;
+    margin-left: 3px;
+}
+
+.dennoko-root .multi-select-toggle .unity-toggle__checkmark {
+    width: 13px;
+    height: 13px;
 }
 
 /* ─── バッチ操作バー ───────────────────────────────────── */
@@ -199,9 +308,9 @@
     background-color: var(--dennoko-surface-1);
     border-color: var(--dennoko-outline);
     border-width: 1px;
-    border-radius: 6px;
-    padding: 6px 8px;
-    margin: 0 8px 6px 8px;
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: 0 3px 3px 3px;
     flex-shrink: 0;
 }
 
@@ -209,14 +318,16 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .dennoko-root .batch-import-button {
-    height: 28px;
+    height: 22px;
+    font-size: 10px;
     -unity-font-style: bold;
     background-color: var(--dennoko-surface-2);
     color: var(--dennoko-text-primary);
+    margin: 1px 0 0 0;
 }
 
 .dennoko-root .batch-import-button:hover {
@@ -227,12 +338,12 @@
 .dennoko-root .items-header-row {
     flex-direction: row;
     align-items: center;
-    padding: 4px 10px;
+    padding: 1px 4px;
     flex-shrink: 0;
 }
 
 .dennoko-root .items-header-title {
-    font-size: 12px;
+    font-size: 10.5px;
     -unity-font-style: bold;
     color: var(--dennoko-text-primary);
 }
@@ -240,22 +351,22 @@
 .dennoko-root .items-warning-container {
     flex-direction: row;
     align-items: center;
-    margin-left: 8px;
-    padding: 1px 5px;
-    border-radius: 4px;
+    margin-left: 4px;
+    padding: 0 3px;
+    border-radius: 3px;
     background-color: var(--dennoko-status-warning-bg);
 }
 
 .dennoko-root .items-warning-icon {
-    width: 14px;
-    height: 14px;
-    margin-right: 3px;
+    width: 12px;
+    height: 12px;
+    margin-right: 2px;
     flex-shrink: 0;
 }
 
 .dennoko-root .items-warning-count {
     color: var(--dennoko-semantic-warning);
-    font-size: 11px;
+    font-size: 9px;
     -unity-font-style: bold;
 }
 
@@ -272,33 +383,38 @@
     background-color: var(--dennoko-surface-0);
 }
 
-/* ─── アイテムカード ───────────────────────────────────── */
+/* ─── アイテムカード (標準 helpBox に匹敵するコンパクト設計) ─ */
 .dennoko-root .item-card {
     flex-direction: row;
     background-color: var(--dennoko-surface-1);
     border-color: var(--dennoko-outline);
     border-width: 1px;
-    border-radius: 6px;
-    padding: 8px 10px;
-    margin: 3px 8px;
+    border-radius: 3px;
+    padding: 2px 3px;
+    margin: 1px 2px;
 }
 
 .dennoko-root .item-card-checkbox {
-    margin-right: 6px;
+    margin-right: 4px;
     align-self: center;
     flex-shrink: 0;
 }
 
+.dennoko-root .item-card-checkbox .unity-toggle__checkmark {
+    width: 13px;
+    height: 13px;
+}
+
 .dennoko-root .item-thumbnail {
-    width: 64px;
-    min-width: 64px;
-    max-width: 64px;
-    height: 64px;
-    min-height: 64px;
-    max-height: 64px;
-    border-radius: 4px;
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    height: 56px;
+    min-height: 56px;
+    max-height: 56px;
+    border-radius: 3px;
     background-color: var(--dennoko-surface-2);
-    margin-right: 10px;
+    margin-right: 5px;
     flex-shrink: 0;
     -unity-background-scale-mode: scale-and-crop;
 }
@@ -311,16 +427,18 @@
 }
 
 .dennoko-root .item-title {
-    font-size: 12px;
+    font-size: 10.5px;
     -unity-font-style: bold;
     color: var(--dennoko-text-primary);
     white-space: normal;
+    margin-bottom: 1px;
 }
 
 .dennoko-root .item-sub-label {
-    font-size: 10px;
+    font-size: 8.5px;
     color: var(--dennoko-text-tertiary);
-    margin-top: 1px;
+    margin-top: 0;
+    margin-bottom: 1px;
     white-space: normal;
 }
 
@@ -328,14 +446,14 @@
     background-color: var(--dennoko-status-info-bg);
     border-color: var(--dennoko-semantic-info);
     border-width: 1px;
-    border-radius: 4px;
-    padding: 4px 6px;
-    margin-top: 4px;
-    margin-bottom: 4px;
+    border-radius: 3px;
+    padding: 1px 3px;
+    margin-top: 2px;
+    margin-bottom: 2px;
 }
 
 .dennoko-root .item-version-text {
-    font-size: 10px;
+    font-size: 8.5px;
     color: var(--dennoko-text-primary);
     white-space: normal;
 }
@@ -344,7 +462,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    margin-top: 4px;
+    margin-top: 1px;
 }
 
 .dennoko-root .item-actions-left {
@@ -353,20 +471,22 @@
 }
 
 .dennoko-root .mini-button {
-    height: 22px;
-    font-size: 10px;
-    padding: 2px 8px;
-    margin: 0 3px 0 0;
+    height: 19px;
+    font-size: 9px;
+    padding: 0 4px;
+    margin: 0 2px 0 0;
+    border-radius: 3px;
 }
 
-/* インポートボタン（通常・更新・再インポート）
-   ※ 青枠 (semantic-info) は「選択中」を示す .dennoko-button-active 専用なので使わない */
+/* インポートボタン（通常・更新・再インポート） */
 .dennoko-root .import-button {
-    min-width: 130px;
-    height: 24px;
-    font-size: 11px;
+    min-width: 105px;
+    height: 20px;
+    font-size: 9.5px;
     -unity-font-style: bold;
+    padding: 0 5px;
     margin: 0;
+    border-radius: 3px;
 }
 
 .dennoko-root .import-button-new {
@@ -385,10 +505,10 @@
 
 /* ─── その他導入済みツールカード ───────────────────────── */
 .dennoko-root .other-tools-header {
-    margin-top: 10px;
-    margin-bottom: 2px;
-    padding: 4px 10px;
-    font-size: 12px;
+    margin-top: 6px;
+    margin-bottom: 1px;
+    padding: 1px 4px;
+    font-size: 10.5px;
     -unity-font-style: bold;
     color: var(--dennoko-text-primary);
     flex-shrink: 0;
@@ -399,16 +519,30 @@
     background-color: var(--dennoko-surface-1);
     border-color: var(--dennoko-outline);
     border-width: 1px;
-    border-radius: 6px;
-    padding: 14px 12px;
-    margin: 10px 8px;
+    border-radius: 4px;
+    padding: 6px 5px;
+    margin: 6px 4px;
     align-items: center;
     flex-shrink: 0;
 }
 
 .dennoko-root .empty-message-text {
     color: var(--dennoko-text-secondary);
-    font-size: 11px;
+    font-size: 9.5px;
     -unity-text-align: middle-center;
     white-space: normal;
+}
+
+/* ─── フッター ─────────────────────────────────────────── */
+.dennoko-root .dennoko-footer {
+    padding: 2px 3px;
+    margin: 2px 2px 1px 2px;
+    border-radius: 3px;
+}
+
+.dennoko-root .dennoko-footer > .unity-button {
+    height: 20px;
+    font-size: 10px;
+    padding: 0 6px;
+    margin: 0;
 }

@@ -132,7 +132,7 @@ namespace Dennokoworks.ToolImporter.Editor
         public static void Open()
         {
             var window = GetWindow<DennokoworksToolImporterWindow>(WindowTitle);
-            window.minSize = new Vector2(480, 420);
+            window.minSize = new Vector2(360, 360);
             window.Show();
         }
 

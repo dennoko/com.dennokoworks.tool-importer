@@ -8,6 +8,7 @@ namespace Dennokoworks.ToolImporter.Editor
         public long BoothItemId;
         public string Name;
         public string ShopSubdomain;
+        public string ShopName;
         public string ThumbnailUrl;
 
         /// <summary>[保存先]/[RegisteredId] の絶対パス。</summary>

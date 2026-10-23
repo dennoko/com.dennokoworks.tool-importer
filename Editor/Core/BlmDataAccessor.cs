@@ -112,10 +112,11 @@ namespace Dennokoworks.ToolImporter.Editor
         public static List<BlmItem> GetItemsByShop(string dbPath, string itemRoot, string shopSubdomain)
         {
             const string select =
-                "SELECT r.id, b.id, COALESCE(NULLIF(o.name, ''), b.name), b.shop_subdomain, b.thumbnail_url " +
+                "SELECT r.id, b.id, COALESCE(NULLIF(o.name, ''), b.name), b.shop_subdomain, b.thumbnail_url, s.name " +
                 "FROM registered_items r " +
                 "JOIN booth_items b ON r.booth_item_id = b.id " +
-                "LEFT JOIN overwritten_booth_items o ON o.booth_item_id = b.id ";
+                "LEFT JOIN overwritten_booth_items o ON o.booth_item_id = b.id " +
+                "LEFT JOIN shops s ON s.subdomain = b.shop_subdomain ";
             const string order = "ORDER BY b.published_at DESC";
 
             var rows = string.IsNullOrEmpty(shopSubdomain)
@@ -134,6 +135,7 @@ namespace Dennokoworks.ToolImporter.Editor
                     Name = row[2] as string ?? registeredId,
                     ShopSubdomain = row[3] as string,
                     ThumbnailUrl = row[4] as string,
+                    ShopName = row.Length > 5 ? row[5] as string : null,
                     ItemDirectory = string.IsNullOrEmpty(itemRoot) ? null : Path.Combine(itemRoot, registeredId),
                 });
             }

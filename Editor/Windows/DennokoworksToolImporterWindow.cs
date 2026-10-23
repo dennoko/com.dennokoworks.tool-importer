@@ -573,7 +573,7 @@ namespace Dennokoworks.ToolImporter.Editor
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUI.BeginChangeCheck();
-                _search = EditorGUILayout.TextField("検索", _search);
+                _search = EditorGUILayout.TextField(new GUIContent("検索", "アイテム名・ショップ名で絞り込み"), _search);
                 if (EditorGUI.EndChangeCheck()) _scrollPosition = Vector2.zero;
 
                 EditorGUI.BeginChangeCheck();
@@ -598,7 +598,7 @@ namespace Dennokoworks.ToolImporter.Editor
                     {
                         foreach (var state in _items)
                         {
-                            if (MatchesSearch(state.Item.Name)) SetSelected(state, true);
+                            if (MatchesSearch(state)) SetSelected(state, true);
                         }
                     }
                     if (IsDennokoworks && GUILayout.Button(new GUIContent("更新ありを選択", "BLM 内に新しいバージョンがあるツールを選択"), EditorStyles.miniButtonMid, GUILayout.ExpandWidth(false)))
@@ -760,7 +760,7 @@ namespace Dennokoworks.ToolImporter.Editor
             _visibleItems.Clear();
             foreach (var state in _items)
             {
-                if (MatchesSearch(state.Item.Name)) _visibleItems.Add(state);
+                if (MatchesSearch(state)) _visibleItems.Add(state);
             }
 
             // スクロールビューの高さはこの時点では分からないため、ウィンドウの高さで代用する（多めに描くだけ）
@@ -825,6 +825,23 @@ namespace Dennokoworks.ToolImporter.Editor
             if (changed) Repaint();
         }
 
+        private bool MatchesSearch(ToolItemState state)
+        {
+            if (string.IsNullOrWhiteSpace(_search)) return true;
+            if (state?.Item == null) return false;
+
+            if (MatchesSearch(state.Item.Name)) return true;
+            if (MatchesSearch(state.Item.ShopName)) return true;
+            if (MatchesSearch(state.Item.ShopSubdomain)) return true;
+
+            var registeredShop = !string.IsNullOrEmpty(state.Item.ShopSubdomain)
+                ? _shopManager.Find(state.Item.ShopSubdomain)
+                : null;
+            if (registeredShop != null && MatchesSearch(registeredShop.displayName)) return true;
+
+            return false;
+        }
+
         private bool MatchesSearch(string text)
         {
             if (string.IsNullOrWhiteSpace(_search)) return true;
@@ -860,7 +877,7 @@ namespace Dennokoworks.ToolImporter.Editor
                     // None（全ショップ）表示時はどのショップのアイテムか分かるようにする
                     if (_shopManager.IsAllShopsSelected && !string.IsNullOrEmpty(item.ShopSubdomain))
                     {
-                        EditorGUILayout.LabelField(GetShopLabel(item.ShopSubdomain), _wrappedMiniStyle);
+                        EditorGUILayout.LabelField(GetShopLabel(item.ShopSubdomain, item.ShopName), _wrappedMiniStyle);
                     }
 
                     // 複数パッケージがあるアイテムは、まとめてインポートで入るファイルを常に明示する
@@ -904,11 +921,19 @@ namespace Dennokoworks.ToolImporter.Editor
             else EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.2f));
         }
 
-        /// <summary>登録済みショップなら表示名、それ以外はサブドメインを返す。</summary>
-        private string GetShopLabel(string subdomain)
+        /// <summary>登録済みショップなら表示名、それ以外は BLM のショップ名またはサブドメインを返す。</summary>
+        private string GetShopLabel(string subdomain, string shopName = null)
         {
             var shop = _shopManager.Find(subdomain);
-            return shop != null && shop.Label != subdomain ? $"{shop.Label} ({subdomain})" : subdomain;
+            if (shop != null && shop.Label != subdomain)
+            {
+                return $"{shop.Label} ({subdomain})";
+            }
+            if (!string.IsNullOrEmpty(shopName))
+            {
+                return $"{shopName} ({subdomain})";
+            }
+            return subdomain;
         }
 
         private void DrawVersionInfo(ToolItemState state)

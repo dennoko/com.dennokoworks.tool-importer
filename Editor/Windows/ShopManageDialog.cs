@@ -20,7 +20,7 @@ namespace Dennokoworks.ToolImporter.Editor
 
         public static void Open(ShopManager shopManager, List<BlmShop> blmShops, string blmError)
         {
-            var window = GetWindow<ShopManageDialog>(true, "ショップの管理", true);
+            var window = GetWindow<ShopManageDialog>(true, ToolImporterLoc.Tr("ShopManageTitle"), true);
             window._shopManager = shopManager;
             window._blmShops = blmShops;
             window._blmError = blmError;
@@ -32,9 +32,10 @@ namespace Dennokoworks.ToolImporter.Editor
         {
             if (_shopManager == null)
             {
-                // ドメインリロードで参照が切れた場合
-                EditorGUILayout.HelpBox("ツールウィンドウから開き直してください。", MessageType.Info);
-                if (GUILayout.Button("閉じる")) Close();
+                EditorGUILayout.HelpBox(ToolImporterLoc.CurrentLanguage == Language.English
+                    ? "Please reopen this dialog from the Tool Importer window."
+                    : "ツールウィンドウから開き直してください。", MessageType.Info);
+                if (GUILayout.Button(ToolImporterLoc.Tr("ShopManageClose"))) Close();
                 return;
             }
 
@@ -50,8 +51,8 @@ namespace Dennokoworks.ToolImporter.Editor
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("起動時のデフォルトショップ", EditorStyles.boldLabel);
-                var options = new List<string> { "None（すべてのショップを表示）" };
+                EditorGUILayout.LabelField(ToolImporterLoc.Tr("ShopManageDefaultShop"), EditorStyles.boldLabel);
+                var options = new List<string> { ToolImporterLoc.Tr("ShopManageDefaultAll") };
                 var values = new List<string> { string.Empty };
                 int currentIndex = 0;
                 for (int i = 0; i < _shopManager.Shops.Count; i++)
@@ -65,7 +66,7 @@ namespace Dennokoworks.ToolImporter.Editor
                     }
                 }
 
-                int selectedIndex = EditorGUILayout.Popup("デフォルト:", currentIndex, options.ToArray());
+                int selectedIndex = EditorGUILayout.Popup(ToolImporterLoc.Tr("ShopManageDefaultLabel"), currentIndex, options.ToArray());
                 if (selectedIndex != currentIndex)
                 {
                     _shopManager.DefaultShopSubdomain = values[selectedIndex];
@@ -76,7 +77,7 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private void DrawRegisteredShops()
         {
-            EditorGUILayout.LabelField("登録済みショップ", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(ToolImporterLoc.Tr("ShopManageRegisteredShops"), EditorStyles.boldLabel);
             using (var scroll = new EditorGUILayout.ScrollViewScope(_registeredScroll, EditorStyles.helpBox, GUILayout.MaxHeight(150)))
             {
                 _registeredScroll = scroll.scrollPosition;
@@ -97,41 +98,58 @@ namespace Dennokoworks.ToolImporter.Editor
 
                         EditorGUILayout.LabelField(shop.subdomain, EditorStyles.miniLabel, GUILayout.MinWidth(70));
 
+                        string defaultBadge = ToolImporterLoc.CurrentLanguage == Language.English ? "[Default]" : "[既定]";
+                        string defaultBtn = ToolImporterLoc.CurrentLanguage == Language.English ? "Default" : "既定";
+                        string openBtn = ToolImporterLoc.CurrentLanguage == Language.English ? "Open" : "開く";
+                        string deleteBtn = ToolImporterLoc.CurrentLanguage == Language.English ? "Delete" : "削除";
+
                         if (isDefault)
                         {
-                            GUILayout.Label("[既定]", EditorStyles.miniBoldLabel, GUILayout.Width(38));
+                            GUILayout.Label(defaultBadge, EditorStyles.miniBoldLabel, GUILayout.Width(46));
                         }
                         else
                         {
-                            if (GUILayout.Button("既定", EditorStyles.miniButton, GUILayout.Width(38)))
+                            if (GUILayout.Button(defaultBtn, EditorStyles.miniButton, GUILayout.Width(46)))
                             {
                                 _shopManager.DefaultShopSubdomain = shop.subdomain;
                             }
                         }
 
-                        if (GUILayout.Button("開く", EditorStyles.miniButtonLeft, GUILayout.Width(38)))
+                        if (GUILayout.Button(openBtn, EditorStyles.miniButtonLeft, GUILayout.Width(38)))
                             Application.OpenURL(shop.ShopUrl);
 
                         using (new EditorGUI.DisabledScope(isBuiltin))
                         {
-                            if (GUILayout.Button("削除", EditorStyles.miniButtonRight, GUILayout.Width(38)))
+                            if (GUILayout.Button(deleteBtn, EditorStyles.miniButtonRight, GUILayout.Width(38)))
                                 toRemove = shop;
                         }
                     }
                 }
 
-                if (toRemove != null
-                    && EditorUtility.DisplayDialog("ショップの削除", $"「{toRemove.Label}」を一覧から削除しますか？", "削除", "キャンセル"))
+                if (toRemove != null)
                 {
-                    _shopManager.RemoveShop(toRemove.subdomain);
+                    string delTitle = ToolImporterLoc.CurrentLanguage == Language.English ? "Remove Shop" : "ショップの削除";
+                    string delMsg = ToolImporterLoc.CurrentLanguage == Language.English
+                        ? $"Remove '{toRemove.Label}' from registered shops?"
+                        : $"「{toRemove.Label}」を一覧から削除しますか？";
+                    string delOk = ToolImporterLoc.CurrentLanguage == Language.English ? "Remove" : "削除";
+                    string delCancel = ToolImporterLoc.CurrentLanguage == Language.English ? "Cancel" : "キャンセル";
+
+                    if (EditorUtility.DisplayDialog(delTitle, delMsg, delOk, delCancel))
+                    {
+                        _shopManager.RemoveShop(toRemove.subdomain);
+                    }
                 }
             }
-            EditorGUILayout.LabelField("表示名は入力後 Enter で保存されます。dennokoworks は登録解除できません。", EditorStyles.wordWrappedMiniLabel);
+            string hint = ToolImporterLoc.CurrentLanguage == Language.English
+                ? "Display names are saved on pressing Enter. dennokoworks cannot be removed."
+                : "表示名は入力後 Enter で保存されます。dennokoworks は登録解除できません。";
+            EditorGUILayout.LabelField(hint, EditorStyles.wordWrappedMiniLabel);
         }
 
         private void DrawBlmShops()
         {
-            EditorGUILayout.LabelField("BLM のショップから追加", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(ToolImporterLoc.Tr("ShopManageBlmShops"), EditorStyles.boldLabel);
 
             if (!string.IsNullOrEmpty(_blmError))
             {
@@ -140,11 +158,13 @@ namespace Dennokoworks.ToolImporter.Editor
             }
             if (_blmShops == null || _blmShops.Count == 0)
             {
-                EditorGUILayout.HelpBox("BLM にアイテムが登録されたショップが見つかりませんでした。", MessageType.Info);
+                EditorGUILayout.HelpBox(ToolImporterLoc.CurrentLanguage == Language.English
+                    ? "No shops with registered items found in BLM."
+                    : "BLM にアイテムが登録されたショップが見つかりませんでした。", MessageType.Info);
                 return;
             }
 
-            _search = EditorGUILayout.TextField("検索", _search);
+            _search = EditorGUILayout.TextField(ToolImporterLoc.Tr("SearchLabel"), _search);
 
             using (var scroll = new EditorGUILayout.ScrollViewScope(_blmScroll, EditorStyles.helpBox, GUILayout.MinHeight(120)))
             {
@@ -156,12 +176,15 @@ namespace Dennokoworks.ToolImporter.Editor
                     using (new EditorGUILayout.HorizontalScope())
                     {
                         EditorGUILayout.LabelField(new GUIContent(shop.Name, shop.Subdomain), GUILayout.MinWidth(120));
-                        EditorGUILayout.LabelField($"{shop.ItemCount} 件", EditorStyles.miniLabel, GUILayout.Width(50));
+                        string itemUnit = ToolImporterLoc.CurrentLanguage == Language.English ? "items" : "件";
+                        EditorGUILayout.LabelField($"{shop.ItemCount} {itemUnit}", EditorStyles.miniLabel, GUILayout.Width(50));
 
                         bool registered = _shopManager.Find(shop.Subdomain) != null;
                         using (new EditorGUI.DisabledScope(registered))
                         {
-                            if (GUILayout.Button(registered ? "登録済み" : "追加", EditorStyles.miniButton, GUILayout.Width(64)))
+                            string registeredText = ToolImporterLoc.CurrentLanguage == Language.English ? "Added" : "登録済み";
+                            string addText = ToolImporterLoc.CurrentLanguage == Language.English ? "Add" : "追加";
+                            if (GUILayout.Button(registered ? registeredText : addText, EditorStyles.miniButton, GUILayout.Width(64)))
                                 _shopManager.AddShop(shop.Subdomain, shop.Name);
                         }
                     }
@@ -171,16 +194,21 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private void DrawManualInput()
         {
-            EditorGUILayout.LabelField("サブドメインを直接入力して追加", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(ToolImporterLoc.Tr("ShopManageManualInput"), EditorStyles.boldLabel);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                _manualSubdomain = EditorGUILayout.TextField(new GUIContent("サブドメイン", "例: dennokoworks（https://dennokoworks.booth.pm/ の URL も可）"), _manualSubdomain);
-                _manualDisplayName = EditorGUILayout.TextField("表示名（任意）", _manualDisplayName);
+                string subLabel = ToolImporterLoc.CurrentLanguage == Language.English ? "Subdomain" : "サブドメイン";
+                string subTooltip = ToolImporterLoc.CurrentLanguage == Language.English ? "e.g. dennokoworks (URL is also supported)" : "例: dennokoworks（https://dennokoworks.booth.pm/ の URL も可）";
+                string nameLabel = ToolImporterLoc.CurrentLanguage == Language.English ? "Display Name (Optional)" : "表示名（任意）";
+                string addBtn = ToolImporterLoc.CurrentLanguage == Language.English ? "Add" : "追加";
+
+                _manualSubdomain = EditorGUILayout.TextField(new GUIContent(subLabel, subTooltip), _manualSubdomain);
+                _manualDisplayName = EditorGUILayout.TextField(nameLabel, _manualDisplayName);
 
                 var subdomain = ShopManager.NormalizeSubdomain(_manualSubdomain);
                 using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(subdomain)))
                 {
-                    if (GUILayout.Button("追加"))
+                    if (GUILayout.Button(addBtn))
                     {
                         var displayName = string.IsNullOrWhiteSpace(_manualDisplayName)
                             ? FindBlmShopName(subdomain) ?? subdomain

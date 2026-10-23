@@ -1,0 +1,126 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+
+    <!-- ヘッダー (固定クローム flex-shrink: 0) -->
+    <ui:VisualElement class="dennoko-header">
+        <ui:VisualElement class="dennoko-header-titlegroup">
+            <ui:Label name="title-label" text="dennokoworks Importer" class="dennoko-title" />
+            <ui:Label name="version-label" text="" class="dennoko-version-label" />
+            <ui:Button name="version-reload-button" text="↻" class="dennoko-version-reload-button" />
+        </ui:VisualElement>
+        <ui:Button name="lang-button" text="EN" class="dennoko-lang-button" />
+    </ui:VisualElement>
+    <ui:VisualElement class="dennoko-separator" />
+
+    <!-- サブツールバー (ショップ指定・＋・マニュアル・設定) -->
+    <ui:VisualElement name="sub-toolbar" class="sub-toolbar">
+        <ui:VisualElement class="shop-bar-left">
+            <ui:Label name="shop-prefix-label" text="ショップ:" class="shop-prefix-label" />
+            <ui:Button name="shop-dropdown-button" text="dennokoworks ▾" class="header-button shop-select-button" />
+            <ui:Button name="add-shop-button" text="＋" class="header-button mini-icon-button" tooltip="ショップを追加・管理" />
+        </ui:VisualElement>
+        <ui:VisualElement class="shop-bar-right">
+            <ui:Button name="manual-button" text="マニュアル" class="header-button" />
+            <ui:Button name="settings-toggle-button" text="設定" class="header-button" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- BLM 設定 (折りたたみカード) -->
+    <ui:VisualElement name="settings-card" class="dennoko-card settings-card" style="display: none;">
+        <ui:Label name="settings-title-label" text="BOOTH Library Manager 設定" class="dennoko-section-title dennoko-card-header" />
+        <ui:VisualElement class="setting-row">
+            <ui:Label name="db-path-label" text="BLM データ (data.db)" class="setting-label" />
+            <ui:Label name="db-path-value" text="" class="setting-value" />
+            <ui:Button name="db-path-browse-button" text="参照..." class="header-button" />
+            <ui:Button name="db-path-auto-button" text="自動" class="header-button" />
+            <ui:Label name="db-path-status" text="自動検出" class="setting-status" />
+        </ui:VisualElement>
+        <ui:VisualElement class="setting-row">
+            <ui:Label name="item-dir-label" text="アイテム保存先" class="setting-label" />
+            <ui:Label name="item-dir-value" text="" class="setting-value" />
+            <ui:Button name="item-dir-browse-button" text="参照..." class="header-button" />
+            <ui:Button name="item-dir-auto-button" text="自動" class="header-button" />
+            <ui:Label name="item-dir-status" text="自動検出" class="setting-status" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-direction: row; justify-content: flex-end; margin-top: 4px;">
+            <ui:Button name="clear-cache-button" text="パッケージ解析キャッシュを削除" class="header-button" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- エラー・警告バナー -->
+    <ui:VisualElement name="load-error-container" class="error-banner" style="display: none;">
+        <ui:Label name="load-error-label" class="error-banner-text" text="" />
+    </ui:VisualElement>
+
+    <!-- インポートキュー進行状況 -->
+    <ui:VisualElement name="queue-card" class="dennoko-card queue-card" style="display: none;">
+        <ui:ProgressBar name="queue-progress-bar" class="queue-progress-bar" />
+        <ui:VisualElement class="queue-actions-row">
+            <ui:Label name="queue-pending-label" text="残り 0 件" class="dennoko-text-tertiary" />
+            <ui:VisualElement style="flex-direction: row;">
+                <ui:Button name="queue-skip-button" text="現在の項目をスキップ" class="header-button" />
+                <ui:Button name="queue-cancel-button" text="残りを中止" class="header-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="queue-summary-container" class="dennoko-card queue-card" style="display: none; flex-direction: row; justify-content: space-between; align-items: center;">
+        <ui:Label name="queue-summary-label" text="" class="dennoko-col-grow" />
+        <ui:Button name="queue-summary-dismiss" text="×" class="header-button" />
+    </ui:VisualElement>
+
+    <!-- 操作バー -->
+    <ui:VisualElement name="action-bar" class="action-bar">
+        <ui:VisualElement class="action-bar-row1">
+            <ui:Button name="check-remote-button" text="最新バージョン確認" class="header-button dennoko-col-grow" />
+            <ui:Button name="reload-list-button" text="一覧を再読み込み" class="header-button dennoko-col-grow" />
+        </ui:VisualElement>
+        <ui:VisualElement class="action-bar-row2">
+            <ui:TextField name="search-field" placeholder-text="アイテム名・ショップ名で絞り込み..." class="search-field" />
+            <ui:Toggle name="multi-select-toggle" text="複数選択モード" class="multi-select-toggle" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- まとめてインポート操作バー -->
+    <ui:VisualElement name="batch-bar" class="batch-bar" style="display: none;">
+        <ui:VisualElement class="batch-bar-row">
+            <ui:VisualElement style="flex-direction: row; align-items: center;">
+                <ui:Button name="batch-select-all-button" text="すべて選択" class="header-button" />
+                <ui:Button name="batch-select-updates-button" text="更新ありを選択" class="header-button" />
+                <ui:Button name="batch-deselect-all-button" text="選択解除" class="header-button" />
+            </ui:VisualElement>
+            <ui:Toggle name="batch-interactive-toggle" text="内容を確認しながら" />
+        </ui:VisualElement>
+        <ui:Button name="batch-import-button" text="まとめてインポート (0 件)" class="batch-import-button" />
+    </ui:VisualElement>
+
+    <!-- アイテム件数ヘッダー -->
+    <ui:VisualElement name="items-header-row" class="items-header-row">
+        <ui:Label name="items-count-label" text="アイテム一覧: 0 件" class="items-header-title" />
+        <ui:VisualElement name="items-warning-container" class="items-warning-container" style="display: none;">
+            <ui:Image name="items-warning-icon" class="items-warning-icon" />
+            <ui:Label name="items-warning-count" class="items-warning-count" text="0" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- メインスクロール領域 -->
+    <ui:ScrollView name="items-scroll-view" class="dennoko-scroll">
+        <ui:VisualElement name="empty-message-card" class="empty-message-card" style="display: none;">
+            <ui:Label name="empty-message-label" text="" class="empty-message-text" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="items-container" />
+
+        <ui:Label name="other-tools-header" text="その他の導入済みツール" class="other-tools-header" style="display: none;" />
+        <ui:VisualElement name="other-tools-container" />
+    </ui:ScrollView>
+
+    <ui:VisualElement class="dennoko-separator" />
+
+    <!-- フッター (固定クローム flex-shrink: 0) -->
+    <ui:VisualElement name="footer-container" class="dennoko-card dennoko-footer">
+        <ui:Button name="open-booth-shop-button" text="BOOTH ショップを開く" class="dennoko-button-secondary" />
+    </ui:VisualElement>
+
+    <!-- ステータスバー -->
+    <ui:Label name="status-label" text="Ready" class="dennoko-status" />
+
+</ui:UXML>

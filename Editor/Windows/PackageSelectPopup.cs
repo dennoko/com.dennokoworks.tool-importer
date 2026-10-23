@@ -23,10 +23,6 @@ namespace Dennokoworks.ToolImporter.Editor
         private readonly Action<List<PackageFile>> _onSetBatch;
         private Vector2 _scroll;
 
-        /// <param name="packages">新しい順に並んだパッケージ（先頭が最新）。</param>
-        /// <param name="initialPaths">最初にチェックしておくパス。空なら最新のみ。</param>
-        /// <param name="onImport">「インポート」押下時。古い順に並べた選択パッケージを渡す。</param>
-        /// <param name="onSetBatch">複数選択モード時のみ指定。まとめてインポートの対象として反映する。</param>
         public PackageSelectPopup(string title, List<PackageFile> packages, ICollection<string> initialPaths,
             Action<List<PackageFile>> onImport, Action<List<PackageFile>> onSetBatch)
         {
@@ -52,7 +48,7 @@ namespace Dennokoworks.ToolImporter.Editor
         public override void OnGUI(Rect rect)
         {
             GUILayout.Label(_title, EditorStyles.boldLabel);
-            GUILayout.Label("インポートするパッケージを選択してください", EditorStyles.miniLabel);
+            GUILayout.Label(ToolImporterLoc.Tr("PopupPrompt"), EditorStyles.miniLabel);
 
             float listHeight = Mathf.Min(_packages.Count * RowHeight + 4, MaxListHeight);
             using (var scroll = new EditorGUILayout.ScrollViewScope(_scroll, GUILayout.Height(listHeight)))
@@ -64,19 +60,19 @@ namespace Dennokoworks.ToolImporter.Editor
             int count = CheckedCount();
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("すべて選択", EditorStyles.miniButtonLeft, GUILayout.ExpandWidth(false)))
+                if (GUILayout.Button(ToolImporterLoc.Tr("SelectAll"), EditorStyles.miniButtonLeft, GUILayout.ExpandWidth(false)))
                     SetAll(true);
-                if (GUILayout.Button("選択解除", EditorStyles.miniButtonRight, GUILayout.ExpandWidth(false)))
+                if (GUILayout.Button(ToolImporterLoc.Tr("DeselectAll"), EditorStyles.miniButtonRight, GUILayout.ExpandWidth(false)))
                     SetAll(false);
                 GUILayout.FlexibleSpace();
-                GUILayout.Label($"{count} 件選択中", EditorStyles.miniLabel);
+                GUILayout.Label(ToolImporterLoc.Tr("PopupSelectedCount", count), EditorStyles.miniLabel);
             }
 
             using (new EditorGUI.DisabledScope(count < 2))
             {
-                GUILayout.Label("複数選んだ場合は古い順に 1 件ずつインポートします", EditorStyles.miniLabel);
+                GUILayout.Label(ToolImporterLoc.Tr("PopupMultiSequentialHint"), EditorStyles.miniLabel);
                 DennokoworksToolImporterWindow.BatchInteractive = EditorGUILayout.ToggleLeft(
-                    new GUIContent("内容を確認しながら", "オンにすると 1 件ずつインポートダイアログを表示します"),
+                    new GUIContent(ToolImporterLoc.Tr("BatchInteractive"), ToolImporterLoc.Tr("BatchInteractiveTooltip")),
                     DennokoworksToolImporterWindow.BatchInteractive);
             }
 
@@ -85,7 +81,7 @@ namespace Dennokoworks.ToolImporter.Editor
             {
                 GUILayout.FlexibleSpace();
                 if (_onSetBatch != null
-                    && GUILayout.Button(new GUIContent("まとめてインポート対象に設定", "チェックしたパッケージを「まとめてインポート」の対象にします"), GUILayout.Height(22)))
+                    && GUILayout.Button(new GUIContent(ToolImporterLoc.Tr("PopupSetBatchButton"), ToolImporterLoc.Tr("PopupSetBatchTooltip")), GUILayout.Height(22)))
                 {
                     var selected = GetSelected();
                     editorWindow.Close();
@@ -95,7 +91,7 @@ namespace Dennokoworks.ToolImporter.Editor
 
                 using (new EditorGUI.DisabledScope(count == 0))
                 {
-                    if (GUILayout.Button($"インポート ({count} 件)", GUILayout.Width(110), GUILayout.Height(22)))
+                    if (GUILayout.Button(ToolImporterLoc.Tr("PopupImportButton", count), GUILayout.Width(130), GUILayout.Height(22)))
                     {
                         var selected = GetSelected();
                         editorWindow.Close();
@@ -110,7 +106,10 @@ namespace Dennokoworks.ToolImporter.Editor
         {
             var package = _packages[index];
             var name = package.RelativePath;
-            if (index == 0 && _packages.Count > 1) name += "  （最新）";
+            if (index == 0 && _packages.Count > 1)
+            {
+                name += ToolImporterLoc.CurrentLanguage == Language.English ? "  (Latest)" : "  （最新）";
+            }
 
             _checked[index] = EditorGUILayout.ToggleLeft(new GUIContent(name, package.Path), _checked[index]);
 

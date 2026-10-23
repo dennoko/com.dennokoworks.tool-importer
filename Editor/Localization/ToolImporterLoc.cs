@@ -103,6 +103,12 @@ namespace Dennokoworks.ToolImporter.Editor
             { "SearchPlaceholder", "アイテム名・ショップ名で絞り込み..." },
             { "SearchTooltip", "アイテム名・ショップ名で絞り込み" },
             { "MultiSelectMode", "複数選択モード" },
+            { "ImportFilterButton", "▼ {0}" },
+            { "ImportFilterTooltip", "インポート状況で一覧を絞り込みます" },
+            { "ImportFilterAll", "全て" },
+            { "ImportFilterNotImported", "未インポート" },
+            { "ImportFilterImported", "インポート済み" },
+            { "NoFilteredItemsMessage", "条件に一致するアイテムはありません。" },
 
             // 一括操作バー
             { "SelectAll", "すべて選択" },
@@ -236,6 +242,12 @@ namespace Dennokoworks.ToolImporter.Editor
             { "SearchPlaceholder", "Filter by item or shop name..." },
             { "SearchTooltip", "Filter by item or shop name" },
             { "MultiSelectMode", "Multi-select Mode" },
+            { "ImportFilterButton", "▼ {0}" },
+            { "ImportFilterTooltip", "Filter the list by import status" },
+            { "ImportFilterAll", "All" },
+            { "ImportFilterNotImported", "Not Imported" },
+            { "ImportFilterImported", "Imported" },
+            { "NoFilteredItemsMessage", "No items match the current filter." },
 
             // Batch Action Bar
             { "SelectAll", "Select All" },

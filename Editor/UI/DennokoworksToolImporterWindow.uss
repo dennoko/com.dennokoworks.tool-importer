@@ -285,6 +285,12 @@
     font-size: 10px;
 }
 
+.dennoko-root .import-filter-button {
+    flex-shrink: 0;
+    margin-left: 0;
+    margin-right: 8px;
+}
+
 .dennoko-root .multi-select-toggle {
     margin-left: 2px;
     margin-top: 0;

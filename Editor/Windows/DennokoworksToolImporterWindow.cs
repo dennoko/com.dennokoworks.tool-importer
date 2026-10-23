@@ -23,6 +23,11 @@ namespace Dennokoworks.ToolImporter.Editor
 
         public enum StatusType { Info, Success, Error }
 
+        /// <summary>インポート状況による一覧の絞り込み。</summary>
+        private enum ImportFilter { All, NotImported, Imported }
+
+        private const string ImportFilterPrefKey = "Dennokoworks.ToolImporter.ImportFilter";
+
         private ShopManager _shopManager;
         private string _dbPath;
         private string _itemRoot;
@@ -38,6 +43,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private bool _showSettings;
         private bool _multiSelect;
         private string _search = "";
+        private ImportFilter _importFilter;
 
         private readonly Dictionary<string, List<string>> _selection = new Dictionary<string, List<string>>();
         /// <summary>一覧の 1 行。BLM のアイテム・「その他の導入済みツール」見出し・そのツールのいずれか。</summary>
@@ -106,6 +112,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private Button _checkRemoteBtn;
         private Button _reloadListBtn;
         private TextField _searchField;
+        private Button _importFilterBtn;
         private Toggle _multiSelectToggle;
 
         private VisualElement _batchBar;
@@ -141,6 +148,8 @@ namespace Dennokoworks.ToolImporter.Editor
             titleContent = new GUIContent(WindowTitle);
             _showSettings = EditorPrefs.GetBool(ShowSettingsPrefKey, false);
             _multiSelect = EditorPrefs.GetBool(MultiSelectPrefKey, false);
+            _importFilter = (ImportFilter)EditorPrefs.GetInt(ImportFilterPrefKey, (int)ImportFilter.All);
+            if (!Enum.IsDefined(typeof(ImportFilter), _importFilter)) _importFilter = ImportFilter.All;
 
             _shopManager = new ShopManager();
             _shopManager.Changed += OnShopManagerChanged;
@@ -287,6 +296,7 @@ namespace Dennokoworks.ToolImporter.Editor
             _checkRemoteBtn = _root.Q<Button>("check-remote-button");
             _reloadListBtn = _root.Q<Button>("reload-list-button");
             _searchField = _root.Q<TextField>("search-field");
+            _importFilterBtn = _root.Q<Button>("import-filter-button");
             _multiSelectToggle = _root.Q<Toggle>("multi-select-toggle");
 
             _batchBar = _root.Q<VisualElement>("batch-bar");
@@ -422,6 +432,8 @@ namespace Dennokoworks.ToolImporter.Editor
                 });
             }
 
+            if (_importFilterBtn != null) _importFilterBtn.clicked += ShowImportFilterMenu;
+
             if (_multiSelectToggle != null)
             {
                 _multiSelectToggle.value = _multiSelect;
@@ -441,7 +453,7 @@ namespace Dennokoworks.ToolImporter.Editor
                 {
                     foreach (var state in _items)
                     {
-                        if (MatchesSearch(state)) SetSelected(state, true);
+                        if (IsListed(state)) SetSelected(state, true);
                     }
                     UpdateBatchBarUI();
                     UpdateItemList();
@@ -534,6 +546,7 @@ namespace Dennokoworks.ToolImporter.Editor
                 _searchField.label = ToolImporterLoc.Tr("SearchLabel");
                 _searchField.tooltip = ToolImporterLoc.Tr("SearchTooltip");
             }
+            UpdateImportFilterButtonUI();
             if (_multiSelectToggle != null) _multiSelectToggle.text = ToolImporterLoc.Tr("MultiSelectMode");
 
             if (_batchSelectAllBtn != null) _batchSelectAllBtn.text = ToolImporterLoc.Tr("SelectAll");
@@ -948,6 +961,45 @@ namespace Dennokoworks.ToolImporter.Editor
             menu.ShowAsContext();
         }
 
+        private void ShowImportFilterMenu()
+        {
+            var menu = new GenericMenu();
+            foreach (ImportFilter filter in Enum.GetValues(typeof(ImportFilter)))
+            {
+                var f = filter;
+                menu.AddItem(new GUIContent(GetImportFilterLabel(f)), _importFilter == f, () => SetImportFilter(f));
+            }
+            menu.DropDown(_importFilterBtn.worldBound);
+        }
+
+        private void SetImportFilter(ImportFilter filter)
+        {
+            if (_importFilter == filter) return;
+            _importFilter = filter;
+            EditorPrefs.SetInt(ImportFilterPrefKey, (int)filter);
+            UpdateImportFilterButtonUI();
+            UpdateItemList();
+        }
+
+        private void UpdateImportFilterButtonUI()
+        {
+            if (_importFilterBtn == null) return;
+            _importFilterBtn.text = ToolImporterLoc.Tr("ImportFilterButton", GetImportFilterLabel(_importFilter));
+            _importFilterBtn.tooltip = ToolImporterLoc.Tr("ImportFilterTooltip");
+            // 既定 (全て) 以外で絞り込み中は青枠で示す
+            _importFilterBtn.EnableInClassList("dennoko-button-active", _importFilter != ImportFilter.All);
+        }
+
+        private static string GetImportFilterLabel(ImportFilter filter)
+        {
+            switch (filter)
+            {
+                case ImportFilter.NotImported: return ToolImporterLoc.Tr("ImportFilterNotImported");
+                case ImportFilter.Imported: return ToolImporterLoc.Tr("ImportFilterImported");
+                default: return ToolImporterLoc.Tr("ImportFilterAll");
+            }
+        }
+
         private void OpenShopManageDialog()
         {
             List<BlmShop> shops = null;
@@ -1193,7 +1245,7 @@ namespace Dennokoworks.ToolImporter.Editor
             var visibleItems = new List<ToolItemState>();
             foreach (var state in _items)
             {
-                if (MatchesSearch(state)) visibleItems.Add(state);
+                if (IsListed(state)) visibleItems.Add(state);
             }
 
             if (visibleItems.Count == 0 && string.IsNullOrEmpty(_loadError))
@@ -1202,8 +1254,11 @@ namespace Dennokoworks.ToolImporter.Editor
                 {
                     _emptyMessageCard.style.display = DisplayStyle.Flex;
                     var target = allShops ? ToolImporterLoc.Tr("InBlm") : ToolImporterLoc.Tr("InBlmShop", shopLabel);
+                    // アイテムはあるが検索・フィルターで全て外れた場合は、BLM が空だという案内を出さない
                     if (_emptyMessageLabel != null)
-                        _emptyMessageLabel.text = ToolImporterLoc.Tr("NoItemsMessage", target);
+                        _emptyMessageLabel.text = _items.Count > 0
+                            ? ToolImporterLoc.Tr("NoFilteredItemsMessage")
+                            : ToolImporterLoc.Tr("NoItemsMessage", target);
                 }
             }
             else
@@ -1392,7 +1447,8 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private void AppendOtherLocalToolRows()
         {
-            if (!IsDennokoworks || _localOnlyTools.Count == 0) return;
+            // プロジェクトに導入済みのツールなので「未インポート」では出さない
+            if (!IsDennokoworks || _localOnlyTools.Count == 0 || _importFilter == ImportFilter.NotImported) return;
 
             bool headerAdded = false;
             foreach (var tool in _localOnlyTools)
@@ -1478,6 +1534,24 @@ namespace Dennokoworks.ToolImporter.Editor
                 return $"{shopName} ({subdomain})";
             }
             return subdomain;
+        }
+
+        /// <summary>検索文字列とインポート状況フィルターの両方に合う（一覧に出す）アイテムか。</summary>
+        private bool IsListed(ToolItemState state) => MatchesImportFilter(state) && MatchesSearch(state);
+
+        private bool MatchesImportFilter(ToolItemState state)
+        {
+            switch (_importFilter)
+            {
+                case ImportFilter.NotImported:
+                    return state.InstallState == InstallState.NotInstalled;
+                case ImportFilter.Imported:
+                    // 一部だけ導入済みのものもインポート済みとして扱う
+                    return state.InstallState == InstallState.Installed
+                        || state.InstallState == InstallState.PartiallyInstalled;
+                default:
+                    return true;
+            }
         }
 
         private bool MatchesSearch(ToolItemState state)

@@ -75,6 +75,7 @@
         </ui:VisualElement>
         <ui:VisualElement class="action-bar-row2">
             <ui:TextField name="search-field" placeholder-text="アイテム名・ショップ名で絞り込み..." class="search-field" />
+            <ui:Button name="import-filter-button" text="▼ 全て" class="header-button import-filter-button" />
             <ui:Toggle name="multi-select-toggle" text="複数選択モード" class="multi-select-toggle" />
         </ui:VisualElement>
     </ui:VisualElement>

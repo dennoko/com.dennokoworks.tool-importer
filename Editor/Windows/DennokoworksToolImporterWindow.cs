@@ -40,7 +40,21 @@ namespace Dennokoworks.ToolImporter.Editor
         private string _search = "";
 
         private readonly Dictionary<string, List<string>> _selection = new Dictionary<string, List<string>>();
-        private readonly Dictionary<string, List<Image>> _thumbnailSubscribers = new Dictionary<string, List<Image>>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>一覧の 1 行。BLM のアイテム・「その他の導入済みツール」見出し・そのツールのいずれか。</summary>
+        private sealed class ListRow
+        {
+            public ToolItemState State;
+            public LocalToolVersion OtherTool;
+            public bool IsOtherToolsHeader;
+        }
+
+        /// <summary>サムネイルを読み込み待ち・表示中の行を参照し続ける間隔（ThumbnailCache の取り消し猶予 1 秒より短く）。</summary>
+        private const long ThumbnailTouchIntervalMs = 500;
+
+        private readonly List<ListRow> _rows = new List<ListRow>();
+        /// <summary>いま行に表示されているサムネイルの Image と URL。行が範囲外になったら外す。</summary>
+        private readonly Dictionary<Image, string> _boundThumbnails = new Dictionary<Image, string>();
+        private bool _allShopsInList;
 
         private ToolImporterVersionChecker.Result _versionResult =
             new ToolImporterVersionChecker.Result { State = ToolImporterVersionChecker.State.Checking, LocalVersion = "0.1.0" };
@@ -105,12 +119,9 @@ namespace Dennokoworks.ToolImporter.Editor
         private VisualElement _itemsWarningContainer;
         private Image _itemsWarningIcon;
         private Label _itemsWarningCount;
-        private ScrollView _itemsScrollView;
         private VisualElement _emptyMessageCard;
         private Label _emptyMessageLabel;
-        private VisualElement _itemsContainer;
-        private Label _otherToolsHeader;
-        private VisualElement _otherToolsContainer;
+        private ListView _itemsListView;
 
         private Button _openBoothShopBtn;
         private Label _statusLabel;
@@ -289,12 +300,10 @@ namespace Dennokoworks.ToolImporter.Editor
             _itemsWarningContainer = _root.Q<VisualElement>("items-warning-container");
             _itemsWarningIcon = _root.Q<Image>("items-warning-icon");
             _itemsWarningCount = _root.Q<Label>("items-warning-count");
-            _itemsScrollView = _root.Q<ScrollView>("items-scroll-view");
             _emptyMessageCard = _root.Q<VisualElement>("empty-message-card");
             _emptyMessageLabel = _root.Q<Label>("empty-message-label");
-            _itemsContainer = _root.Q<VisualElement>("items-container");
-            _otherToolsHeader = _root.Q<Label>("other-tools-header");
-            _otherToolsContainer = _root.Q<VisualElement>("other-tools-container");
+            _itemsListView = _root.Q<ListView>("items-list-view");
+            SetupItemsListView();
 
             _openBoothShopBtn = _root.Q<Button>("open-booth-shop-button");
             _statusLabel = _root.Q<Label>("status-label");
@@ -546,8 +555,6 @@ namespace Dennokoworks.ToolImporter.Editor
                 _queueSkipBtn.tooltip = ToolImporterLoc.Tr("QueueSkipCurrentTooltip");
             }
             if (_queueCancelBtn != null) _queueCancelBtn.text = ToolImporterLoc.Tr("QueueCancelPending");
-
-            if (_otherToolsHeader != null) _otherToolsHeader.text = ToolImporterLoc.Tr("OtherLocalToolsTitle");
 
             ApplyVersionLabel();
             UpdateSettingsUI();
@@ -1096,11 +1103,59 @@ namespace Dennokoworks.ToolImporter.Editor
             }
         }
 
+        private void SetupItemsListView()
+        {
+            if (_itemsListView == null) return;
+
+            _itemsListView.itemsSource = _rows;
+            _itemsListView.makeItem = () => new VisualElement();
+            _itemsListView.bindItem = (element, index) =>
+            {
+                UnbindRowThumbnails(element);
+                element.Clear();
+                if (index >= 0 && index < _rows.Count) element.Add(CreateRowElement(_rows[index]));
+            };
+            _itemsListView.unbindItem = (element, index) => UnbindRowThumbnails(element);
+
+            // 読み込み待ちのサムネイルを参照し続ける（参照が途切れると ThumbnailCache が取り消す）。
+            // 表示中のテクスチャも参照して、上限超過時の破棄対象から外す。
+            _itemsListView.schedule.Execute(TouchBoundThumbnails).Every(ThumbnailTouchIntervalMs);
+        }
+
+        private VisualElement CreateRowElement(ListRow row)
+        {
+            if (row.IsOtherToolsHeader)
+            {
+                var header = new Label(ToolImporterLoc.Tr("OtherLocalToolsTitle"));
+                header.AddToClassList("other-tools-header");
+                return header;
+            }
+            if (row.OtherTool != null) return CreateOtherToolElement(row.OtherTool);
+            return CreateItemElement(row.State, _allShopsInList);
+        }
+
+        private void UnbindRowThumbnails(VisualElement element)
+        {
+            element.Query<Image>(className: "item-thumbnail").ForEach(img =>
+            {
+                _boundThumbnails.Remove(img);
+                img.image = null;
+            });
+        }
+
+        private void TouchBoundThumbnails()
+        {
+            if (_boundThumbnails.Count == 0) return;
+            foreach (var kv in _boundThumbnails)
+            {
+                var tex = ThumbnailCache.Get(kv.Value);
+                if (tex != null && kv.Key.image != tex) kv.Key.image = tex;
+            }
+        }
+
         private void UpdateItemList()
         {
-            if (_itemsContainer == null) return;
-            _thumbnailSubscribers.Clear();
-            _itemsContainer.Clear();
+            if (_itemsListView == null) return;
 
             bool allShops = _shopManager != null && _shopManager.IsAllShopsSelected;
             var shopLabel = allShops ? ToolImporterLoc.Tr("AllShops") : _shopManager.CurrentShop.Label;
@@ -1156,12 +1211,13 @@ namespace Dennokoworks.ToolImporter.Editor
                 if (_emptyMessageCard != null) _emptyMessageCard.style.display = DisplayStyle.None;
             }
 
-            foreach (var state in visibleItems)
-            {
-                _itemsContainer.Add(CreateItemElement(state, allShops));
-            }
+            _allShopsInList = allShops;
+            _rows.Clear();
+            foreach (var state in visibleItems) _rows.Add(new ListRow { State = state });
+            AppendOtherLocalToolRows();
 
-            UpdateOtherLocalTools();
+            // 表示中の行だけ作り直す（範囲外の行は要素を持たない）
+            _itemsListView.RefreshItems();
         }
 
         private VisualElement CreateItemElement(ToolItemState state, bool allShops)
@@ -1189,17 +1245,8 @@ namespace Dennokoworks.ToolImporter.Editor
             thumb.AddToClassList("item-thumbnail");
             if (!string.IsNullOrEmpty(item.ThumbnailUrl))
             {
-                var tex = ThumbnailCache.Get(item.ThumbnailUrl);
-                if (tex != null) thumb.image = tex;
-                else
-                {
-                    if (!_thumbnailSubscribers.TryGetValue(item.ThumbnailUrl, out var list))
-                    {
-                        list = new List<Image>();
-                        _thumbnailSubscribers[item.ThumbnailUrl] = list;
-                    }
-                    list.Add(thumb);
-                }
+                thumb.image = ThumbnailCache.Get(item.ThumbnailUrl);
+                _boundThumbnails[thumb] = item.ThumbnailUrl;
             }
             card.Add(thumb);
 
@@ -1343,107 +1390,81 @@ namespace Dennokoworks.ToolImporter.Editor
             return importBtn;
         }
 
-        private void UpdateOtherLocalTools()
+        private void AppendOtherLocalToolRows()
         {
-            if (_otherToolsHeader == null || _otherToolsContainer == null) return;
-            _otherToolsContainer.Clear();
+            if (!IsDennokoworks || _localOnlyTools.Count == 0) return;
 
-            if (!IsDennokoworks || _localOnlyTools.Count == 0)
-            {
-                _otherToolsHeader.style.display = DisplayStyle.None;
-                _otherToolsContainer.style.display = DisplayStyle.None;
-                return;
-            }
-
-            var visibleTools = new List<LocalToolVersion>();
+            bool headerAdded = false;
             foreach (var tool in _localOnlyTools)
             {
-                if (MatchesSearch(tool.ToolFolder)) visibleTools.Add(tool);
-            }
-
-            if (visibleTools.Count == 0)
-            {
-                _otherToolsHeader.style.display = DisplayStyle.None;
-                _otherToolsContainer.style.display = DisplayStyle.None;
-                return;
-            }
-
-            _otherToolsHeader.style.display = DisplayStyle.Flex;
-            _otherToolsContainer.style.display = DisplayStyle.Flex;
-
-            foreach (var tool in visibleTools)
-            {
-                var remote = tool.HasGitHubRepo ? DennokoVersionChecker.GetCachedResult(tool.GitHubOwner, tool.GitHubRepo) : null;
-                bool hasUpdate = remote != null && remote.state == RemoteVersionState.Success
-                    && DennokoVersionChecker.IsNewer(remote.version, tool.Version);
-
-                var card = new VisualElement();
-                card.AddToClassList("item-card");
-
-                var body = new VisualElement();
-                body.AddToClassList("item-body");
-
-                var nameLabel = new Label(tool.ToolFolder);
-                nameLabel.AddToClassList("item-title");
-                body.Add(nameLabel);
-
-                if (hasUpdate)
+                if (!MatchesSearch(tool.ToolFolder)) continue;
+                if (!headerAdded)
                 {
-                    var notice = new Label(ToolImporterLoc.Tr("OtherToolUpdateAvailable", DennokoVersionChecker.Display(remote.version)));
-                    notice.AddToClassList("item-sub-label");
-                    notice.AddToClassList("dennoko-text-warning");
-                    body.Add(notice);
+                    _rows.Add(new ListRow { IsOtherToolsHeader = true });
+                    headerAdded = true;
                 }
-
-                card.Add(body);
-
-                var actions = new VisualElement();
-                actions.AddToClassList("item-actions-left");
-                actions.style.alignSelf = Align.Center;
-
-                var pingBtn = new Button(() =>
-                {
-                    var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(tool.VersionJsonPath);
-                    if (asset != null) EditorGUIUtility.PingObject(asset);
-                })
-                {
-                    text = ToolImporterLoc.Tr("PingButton")
-                };
-                pingBtn.AddToClassList("mini-button");
-                actions.Add(pingBtn);
-
-                var boothBtn = new Button(() =>
-                {
-                    if (_shopManager?.CurrentShop != null)
-                        Application.OpenURL(_shopManager.CurrentShop.ShopUrl);
-                })
-                {
-                    text = ToolImporterLoc.Tr("BoothButton")
-                };
-                boothBtn.AddToClassList("mini-button");
-                if (hasUpdate) boothBtn.AddToClassList("import-button-update");
-                actions.Add(boothBtn);
-
-                card.Add(actions);
-                _otherToolsContainer.Add(card);
+                _rows.Add(new ListRow { OtherTool = tool });
             }
         }
 
-        private void OnThumbnailLoaded()
+        private VisualElement CreateOtherToolElement(LocalToolVersion tool)
         {
-            if (_thumbnailSubscribers.Count == 0) return;
-            foreach (var kv in _thumbnailSubscribers)
+            var remote = tool.HasGitHubRepo ? DennokoVersionChecker.GetCachedResult(tool.GitHubOwner, tool.GitHubRepo) : null;
+            bool hasUpdate = remote != null && remote.state == RemoteVersionState.Success
+                && DennokoVersionChecker.IsNewer(remote.version, tool.Version);
+
+            var card = new VisualElement();
+            card.AddToClassList("item-card");
+
+            var body = new VisualElement();
+            body.AddToClassList("item-body");
+
+            var nameLabel = new Label(tool.ToolFolder);
+            nameLabel.AddToClassList("item-title");
+            body.Add(nameLabel);
+
+            if (hasUpdate)
             {
-                var tex = ThumbnailCache.Get(kv.Key);
-                if (tex != null)
-                {
-                    foreach (var img in kv.Value)
-                    {
-                        if (img != null) img.image = tex;
-                    }
-                }
+                var notice = new Label(ToolImporterLoc.Tr("OtherToolUpdateAvailable", DennokoVersionChecker.Display(remote.version)));
+                notice.AddToClassList("item-sub-label");
+                notice.AddToClassList("dennoko-text-warning");
+                body.Add(notice);
             }
+
+            card.Add(body);
+
+            var actions = new VisualElement();
+            actions.AddToClassList("item-actions-left");
+            actions.style.alignSelf = Align.Center;
+
+            var pingBtn = new Button(() =>
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(tool.VersionJsonPath);
+                if (asset != null) EditorGUIUtility.PingObject(asset);
+            })
+            {
+                text = ToolImporterLoc.Tr("PingButton")
+            };
+            pingBtn.AddToClassList("mini-button");
+            actions.Add(pingBtn);
+
+            var boothBtn = new Button(() =>
+            {
+                if (_shopManager?.CurrentShop != null)
+                    Application.OpenURL(_shopManager.CurrentShop.ShopUrl);
+            })
+            {
+                text = ToolImporterLoc.Tr("BoothButton")
+            };
+            boothBtn.AddToClassList("mini-button");
+            if (hasUpdate) boothBtn.AddToClassList("import-button-update");
+            actions.Add(boothBtn);
+
+            card.Add(actions);
+            return card;
         }
+
+        private void OnThumbnailLoaded() => TouchBoundThumbnails();
 
         private string GetShopLabel(string subdomain, string shopName = null)
         {

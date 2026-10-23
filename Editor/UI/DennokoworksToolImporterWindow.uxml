@@ -101,17 +101,14 @@
         </ui:VisualElement>
     </ui:VisualElement>
 
-    <!-- メインスクロール領域 -->
-    <ui:ScrollView name="items-scroll-view" class="dennoko-scroll">
-        <ui:VisualElement name="empty-message-card" class="empty-message-card" style="display: none;">
-            <ui:Label name="empty-message-label" text="" class="empty-message-text" />
-        </ui:VisualElement>
+    <ui:VisualElement name="empty-message-card" class="empty-message-card" style="display: none;">
+        <ui:Label name="empty-message-label" text="" class="empty-message-text" />
+    </ui:VisualElement>
 
-        <ui:VisualElement name="items-container" />
-
-        <ui:Label name="other-tools-header" text="その他の導入済みツール" class="other-tools-header" style="display: none;" />
-        <ui:VisualElement name="other-tools-container" />
-    </ui:ScrollView>
+    <!-- メインスクロール領域 (仮想化: 表示範囲の行だけ生成する。行は C# で動的生成) -->
+    <ui:ListView name="items-list-view" class="dennoko-scroll items-list-view"
+        virtualization-method="DynamicHeight" selection-type="None"
+        show-border="false" show-alternating-row-backgrounds="None" />
 
     <ui:VisualElement class="dennoko-separator" />
 

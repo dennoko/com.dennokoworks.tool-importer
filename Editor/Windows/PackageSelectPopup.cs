@@ -106,10 +106,7 @@ namespace Dennokoworks.ToolImporter.Editor
         {
             var package = _packages[index];
             var name = package.RelativePath;
-            if (index == 0 && _packages.Count > 1)
-            {
-                name += ToolImporterLoc.CurrentLanguage == Language.English ? "  (Latest)" : "  （最新）";
-            }
+            if (index == 0 && _packages.Count > 1) name += ToolImporterLoc.Tr("PopupLatestSuffix");
 
             _checked[index] = EditorGUILayout.ToggleLeft(new GUIContent(name, package.Path), _checked[index]);
 

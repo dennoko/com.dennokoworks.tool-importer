@@ -174,7 +174,25 @@ namespace Dennokoworks.ToolImporter.Editor
             { "ShopManageManualInput", "サブドメイン直接入力で追加" },
             { "ShopManageClose", "閉じる" },
             { "ShopManageDefaultLabel", "デフォルト:" },
-            { "ShopManageDefaultAll", "None（すべてのショップを表示）" }
+            { "ShopManageDefaultAll", "None（すべてのショップを表示）" },
+            { "PopupLatestSuffix", "  （最新）" },
+            { "ShopManageReopen", "ツールウィンドウから開き直してください。" },
+            { "ShopManageDefaultBadge", "[既定]" },
+            { "ShopManageSetDefault", "既定" },
+            { "ShopManageOpen", "開く" },
+            { "ShopManageDelete", "削除" },
+            { "ShopManageDeleteTitle", "ショップの削除" },
+            { "ShopManageDeleteMessage", "「{0}」を一覧から削除しますか？" },
+            { "ShopManageDeleteOk", "削除" },
+            { "Cancel", "キャンセル" },
+            { "ShopManageNameHint", "表示名は入力後 Enter で保存されます。dennokoworks は登録解除できません。" },
+            { "ShopManageNoBlmShops", "BLM にアイテムが登録されたショップが見つかりませんでした。" },
+            { "ShopManageItemCount", "{0} 件" },
+            { "ShopManageRegistered", "登録済み" },
+            { "ShopManageAdd", "追加" },
+            { "ShopManageSubdomain", "サブドメイン" },
+            { "ShopManageSubdomainTooltip", "例: dennokoworks（https://dennokoworks.booth.pm/ の URL も可）" },
+            { "ShopManageDisplayName", "表示名（任意）" }
         };
 
         private static readonly Dictionary<string, string> StringsEn = new Dictionary<string, string>
@@ -289,7 +307,25 @@ namespace Dennokoworks.ToolImporter.Editor
             { "ShopManageManualInput", "Add by Subdomain" },
             { "ShopManageClose", "Close" },
             { "ShopManageDefaultLabel", "Default:" },
-            { "ShopManageDefaultAll", "None (Show All Shops)" }
+            { "ShopManageDefaultAll", "None (Show All Shops)" },
+            { "PopupLatestSuffix", "  (Latest)" },
+            { "ShopManageReopen", "Please reopen this dialog from the Tool Importer window." },
+            { "ShopManageDefaultBadge", "[Default]" },
+            { "ShopManageSetDefault", "Default" },
+            { "ShopManageOpen", "Open" },
+            { "ShopManageDelete", "Delete" },
+            { "ShopManageDeleteTitle", "Remove Shop" },
+            { "ShopManageDeleteMessage", "Remove '{0}' from registered shops?" },
+            { "ShopManageDeleteOk", "Remove" },
+            { "Cancel", "Cancel" },
+            { "ShopManageNameHint", "Display names are saved on pressing Enter. dennokoworks cannot be removed." },
+            { "ShopManageNoBlmShops", "No shops with registered items found in BLM." },
+            { "ShopManageItemCount", "{0} items" },
+            { "ShopManageRegistered", "Added" },
+            { "ShopManageAdd", "Add" },
+            { "ShopManageSubdomain", "Subdomain" },
+            { "ShopManageSubdomainTooltip", "e.g. dennokoworks (URL is also supported)" },
+            { "ShopManageDisplayName", "Display Name (Optional)" }
         };
     }
 }

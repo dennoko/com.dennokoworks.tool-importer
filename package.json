@@ -1,6 +1,6 @@
 {
   "name": "com.dennokoworks.tool-importer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "dennokoworks Tool Importer",
   "description": "BOOTH Library Manager (BLM) と連携し、購入済み dennokoworks 製ツールのUnityプロジェクトへの簡単インポートおよび最新バージョン確認を行うエディタ拡張ツールです。",
   "unity": "2022.3",

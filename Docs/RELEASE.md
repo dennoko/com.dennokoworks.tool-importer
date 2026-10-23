@@ -53,7 +53,7 @@ flowchart TD
 
 ### スクリプトが自動で行う処理
 - `package.json` からパッケージ名とバージョン番号を自動読み取り
-- **`.git/` や不要な中間ファイル（`.vs/`, `*.zip`, スクリプト自身）を確実に除外**
+- **`.git/` や不要な中間ファイル（`.vs/`, `.idea/`, `.claude/`, `*.zip`, スクリプト自身）を確実に除外**
 - **利用者に不要な開発用ファイル（`.gitignore`, `vpm-repository-template.json`, `Docs/RELEASE.md`, `Docs/Impl/`）とその `.meta` も除外**
 - **VPM 仕様に準拠した形式（ZIP のルート直下に `package.json` を配置）で自動圧縮**
 - パッケージの出力先: `Packages/com.dennokoworks.tool-importer-<version>.zip`

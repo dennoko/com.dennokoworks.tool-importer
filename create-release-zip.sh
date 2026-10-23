@@ -36,6 +36,7 @@ if command -v zip >/dev/null 2>&1; then
         -x "*.git*" \
         -x "*.vs*" \
         -x "*.idea*" \
+        -x "*.claude*" \
         -x "*.zip" \
         -x "create-release-zip.*" \
         -x "vpm-repository-template.json*" \

@@ -64,6 +64,7 @@ $zipArchive = [System.IO.Compression.ZipFile]::Open($zipFilePath, [System.IO.Com
 # .meta も一緒に除外する（アセット本体の無い .meta が残ると Unity が警告を出すため）
 $excludedPaths = @(
     '.gitignore',
+    '.claude',
     'vpm-repository-template.json',
     'Docs/RELEASE.md',
     'Docs/Impl'
@@ -74,6 +75,7 @@ $files = Get-ChildItem -Path $repoRoot -Recurse -File | Where-Object {
     if ($path -match '[\\/]\.git([\\/]|$)') { return $false }
     if ($path -match '[\\/]\.vs([\\/]|$)') { return $false }
     if ($path -match '[\\/]\.idea([\\/]|$)') { return $false }
+    if ($path -match '[\\/]\.claude([\\/]|$)') { return $false }
     if ($path -match 'create-release-zip') { return $false }
     if ($path -like '*.zip') { return $false }
 

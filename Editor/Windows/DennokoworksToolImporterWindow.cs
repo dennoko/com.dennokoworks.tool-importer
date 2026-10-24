@@ -19,7 +19,8 @@ namespace Dennokoworks.ToolImporter.Editor
         private const string USS_WINDOW_GUID = "7909e5123070431da8866a2a51cc9ebd";
 
         private const string PackageName = "com.dennokoworks.tool-importer";
-        private const string ManualRelativePath = "Docs/user_manual_ja.pdf";
+        private const string ManualRelativePathJa = "Docs/user_manual_ja.pdf";
+        private const string ManualRelativePathEn = "Docs/user_manual_en.pdf";
 
         public enum StatusType { Info, Success, Error }
 
@@ -1027,7 +1028,8 @@ namespace Dennokoworks.ToolImporter.Editor
             var path = GetManualPath();
             if (path == null || !File.Exists(path))
             {
-                EditorUtility.DisplayDialog(WindowTitle, ToolImporterLoc.Tr("ManualNotFound", path ?? ManualRelativePath), "OK");
+                string expected = ToolImporterLoc.CurrentLanguage == Language.English ? ManualRelativePathEn : ManualRelativePathJa;
+                EditorUtility.DisplayDialog(WindowTitle, ToolImporterLoc.Tr("ManualNotFound", path ?? expected), "OK");
                 return;
             }
             Application.OpenURL(new Uri(path).AbsoluteUri);
@@ -1039,7 +1041,20 @@ namespace Dennokoworks.ToolImporter.Editor
             var root = info != null && !string.IsNullOrEmpty(info.resolvedPath)
                 ? info.resolvedPath
                 : Path.GetFullPath(Path.Combine("Packages", PackageName));
-            return Path.GetFullPath(Path.Combine(root, ManualRelativePath));
+
+            string relative = ToolImporterLoc.CurrentLanguage == Language.English
+                ? ManualRelativePathEn
+                : ManualRelativePathJa;
+            string fullPath = Path.GetFullPath(Path.Combine(root, relative));
+
+            // 英語版 PDF が未作成の場合は日本語版 PDF へフォールバック
+            if (ToolImporterLoc.CurrentLanguage == Language.English && !File.Exists(fullPath))
+            {
+                string jaPath = Path.GetFullPath(Path.Combine(root, ManualRelativePathJa));
+                if (File.Exists(jaPath)) return jaPath;
+            }
+
+            return fullPath;
         }
 
         private void UpdateSettingsUI()

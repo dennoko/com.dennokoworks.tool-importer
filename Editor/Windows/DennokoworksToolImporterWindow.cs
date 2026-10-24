@@ -54,18 +54,13 @@ namespace Dennokoworks.ToolImporter.Editor
             public bool IsOtherToolsHeader;
         }
 
-        /// <summary>サムネイルを読み込み待ち・表示中の行を参照し続ける間隔。</summary>
+        /// <summary>サムネイルを読み込み待ち・表示中の行を参照し続ける間隔（ThumbnailCache の取り消し猶予 1 秒より短く）。</summary>
         private const long ThumbnailTouchIntervalMs = 500;
 
-        private const int InitialBatchSize = 30;
-        private const int BatchIncrement = 30;
-
         private readonly List<ListRow> _rows = new List<ListRow>();
-        /// <summary>いま行に表示されているサムネイルの Image と URL。</summary>
+        /// <summary>いま行に表示されているサムネイルの Image と URL。行が範囲外になったら外す。</summary>
         private readonly Dictionary<Image, string> _boundThumbnails = new Dictionary<Image, string>();
         private bool _allShopsInList;
-        private int _displayedRowCount;
-        private bool _resetPagingOnNextUpdate = true;
 
         private ToolImporterVersionChecker.Result _versionResult =
             new ToolImporterVersionChecker.Result { State = ToolImporterVersionChecker.State.Checking, LocalVersion = "0.2.0" };
@@ -133,9 +128,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private Label _itemsWarningCount;
         private VisualElement _emptyMessageCard;
         private Label _emptyMessageLabel;
-        private ScrollView _itemsScrollView;
-        private VisualElement _loadMoreContainer;
-        private Button _loadMoreBtn;
+        private ListView _itemsListView;
 
         private Button _openBoothShopBtn;
         private Label _statusLabel;
@@ -173,8 +166,6 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private void OnDisable()
         {
-            if (_itemsScrollView != null && _itemsScrollView.verticalScroller != null)
-                _itemsScrollView.verticalScroller.valueChanged -= OnScrollValueChanged;
             if (_shopManager != null) _shopManager.Changed -= OnShopManagerChanged;
             PackageImporter.ScanCompleted -= OnPackageScanCompleted;
             ThumbnailCache.Loaded -= OnThumbnailLoaded;
@@ -321,12 +312,8 @@ namespace Dennokoworks.ToolImporter.Editor
             _itemsWarningCount = _root.Q<Label>("items-warning-count");
             _emptyMessageCard = _root.Q<VisualElement>("empty-message-card");
             _emptyMessageLabel = _root.Q<Label>("empty-message-label");
-            _itemsScrollView = _root.Q<ScrollView>("items-scroll-view");
-            if (_itemsScrollView != null)
-            {
-                _itemsScrollView.verticalScroller.valueChanged += OnScrollValueChanged;
-                _itemsScrollView.schedule.Execute(TouchBoundThumbnails).Every(ThumbnailTouchIntervalMs);
-            }
+            _itemsListView = _root.Q<ListView>("items-list-view");
+            SetupItemsListView();
 
             _openBoothShopBtn = _root.Q<Button>("open-booth-shop-button");
             _statusLabel = _root.Q<Label>("status-label");
@@ -444,7 +431,6 @@ namespace Dennokoworks.ToolImporter.Editor
                     // 入力欄自身の値の変更だけを拾う（拾うと言語切替で _search がラベル文字になる）
                     if (evt.target != _searchField) return;
                     _search = evt.newValue;
-                    _resetPagingOnNextUpdate = true;
                     UpdateItemList();
                 });
             }
@@ -592,7 +578,7 @@ namespace Dennokoworks.ToolImporter.Editor
             UpdateActionBarUI();
             UpdateBatchBarUI();
             UpdateQueueUI();
-            UpdateItemList(resetPaging: false);
+            UpdateItemList();
             UpdateFooterUI();
         }
 
@@ -668,7 +654,6 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private void Reload()
         {
-            _resetPagingOnNextUpdate = true;
             _items.Clear();
             _loadError = null;
             _dbPath = null;
@@ -996,7 +981,6 @@ namespace Dennokoworks.ToolImporter.Editor
             _importFilter = filter;
             EditorPrefs.SetInt(ImportFilterPrefKey, (int)filter);
             UpdateImportFilterButtonUI();
-            _resetPagingOnNextUpdate = true;
             UpdateItemList();
         }
 
@@ -1174,76 +1158,23 @@ namespace Dennokoworks.ToolImporter.Editor
             }
         }
 
-        private void OnScrollValueChanged(float value)
+        private void SetupItemsListView()
         {
-            if (_rows == null || _displayedRowCount >= _rows.Count) return;
-            float max = _itemsScrollView.verticalScroller.highValue;
-            if (max > 0 && value >= max - 250f)
+            if (_itemsListView == null) return;
+
+            _itemsListView.itemsSource = _rows;
+            _itemsListView.makeItem = () => new VisualElement();
+            _itemsListView.bindItem = (element, index) =>
             {
-                AppendNextBatch();
-            }
-        }
+                UnbindRowThumbnails(element);
+                element.Clear();
+                if (index >= 0 && index < _rows.Count) element.Add(CreateRowElement(_rows[index]));
+            };
+            _itemsListView.unbindItem = (element, index) => UnbindRowThumbnails(element);
 
-        private void AppendNextBatch()
-        {
-            if (_rows == null || _displayedRowCount >= _rows.Count) return;
-
-            if (_loadMoreContainer != null && _loadMoreContainer.parent == _itemsScrollView)
-            {
-                _itemsScrollView.Remove(_loadMoreContainer);
-            }
-
-            int target = Math.Min(_displayedRowCount + BatchIncrement, _rows.Count);
-            for (int i = _displayedRowCount; i < target; i++)
-            {
-                _itemsScrollView.Add(CreateRowElement(_rows[i]));
-            }
-            _displayedRowCount = target;
-
-            UpdateLoadMoreUI();
-        }
-
-        private void UpdateLoadMoreUI()
-        {
-            if (_itemsScrollView == null) return;
-
-            if (_rows == null || _displayedRowCount >= _rows.Count)
-            {
-                if (_loadMoreContainer != null && _loadMoreContainer.parent == _itemsScrollView)
-                {
-                    _itemsScrollView.Remove(_loadMoreContainer);
-                }
-                return;
-            }
-
-            if (_loadMoreContainer == null)
-            {
-                _loadMoreContainer = new VisualElement();
-                _loadMoreContainer.AddToClassList("load-more-container");
-
-                _loadMoreBtn = new Button(AppendNextBatch);
-                _loadMoreBtn.AddToClassList("header-button");
-                _loadMoreBtn.AddToClassList("load-more-button");
-                _loadMoreContainer.Add(_loadMoreBtn);
-            }
-
-            int remaining = _rows.Count - _displayedRowCount;
-            _loadMoreBtn.text = ToolImporterLoc.Tr("LoadMoreItems", remaining);
-
-            if (_loadMoreContainer.parent != _itemsScrollView)
-            {
-                _itemsScrollView.Add(_loadMoreContainer);
-            }
-        }
-
-        private void CheckViewportFullness()
-        {
-            if (_itemsScrollView == null || _rows == null || _displayedRowCount >= _rows.Count) return;
-            if (_itemsScrollView.verticalScroller.highValue <= 0)
-            {
-                AppendNextBatch();
-                _itemsScrollView.schedule.Execute(CheckViewportFullness).StartingIn(50);
-            }
+            // 読み込み待ちのサムネイルを参照し続ける（参照が途切れると ThumbnailCache が取り消す）。
+            // 表示中のテクスチャも参照して、上限超過時の破棄対象から外す。
+            _itemsListView.schedule.Execute(TouchBoundThumbnails).Every(ThumbnailTouchIntervalMs);
         }
 
         private VisualElement CreateRowElement(ListRow row)
@@ -1258,6 +1189,15 @@ namespace Dennokoworks.ToolImporter.Editor
             return CreateItemElement(row.State, _allShopsInList);
         }
 
+        private void UnbindRowThumbnails(VisualElement element)
+        {
+            element.Query<Image>(className: "item-thumbnail").ForEach(img =>
+            {
+                _boundThumbnails.Remove(img);
+                img.image = null;
+            });
+        }
+
         private void TouchBoundThumbnails()
         {
             if (_boundThumbnails.Count == 0) return;
@@ -1268,9 +1208,9 @@ namespace Dennokoworks.ToolImporter.Editor
             }
         }
 
-        private void UpdateItemList(bool? resetPaging = null)
+        private void UpdateItemList()
         {
-            if (_itemsScrollView == null) return;
+            if (_itemsListView == null) return;
 
             bool allShops = _shopManager != null && _shopManager.IsAllShopsSelected;
             var shopLabel = allShops ? ToolImporterLoc.Tr("AllShops") : _shopManager.CurrentShop.Label;
@@ -1334,29 +1274,9 @@ namespace Dennokoworks.ToolImporter.Editor
             foreach (var state in visibleItems) _rows.Add(new ListRow { State = state });
             AppendOtherLocalToolRows();
 
-            bool shouldReset = resetPaging ?? _resetPagingOnNextUpdate;
-            _resetPagingOnNextUpdate = false;
-
-            if (shouldReset)
-            {
-                _displayedRowCount = Math.Min(InitialBatchSize, _rows.Count);
-                _itemsScrollView.scrollOffset = Vector2.zero;
-            }
-            else
-            {
-                _displayedRowCount = Math.Min(_rows.Count, Math.Max(InitialBatchSize, _displayedRowCount));
-            }
-
-            _boundThumbnails.Clear();
-            _itemsScrollView.Clear();
-
-            for (int i = 0; i < _displayedRowCount; i++)
-            {
-                _itemsScrollView.Add(CreateRowElement(_rows[i]));
-            }
-
-            UpdateLoadMoreUI();
-            _itemsScrollView.schedule.Execute(CheckViewportFullness).StartingIn(50);
+            // 行要素をすべて bind し直す。RefreshItems は DynamicHeight だと非表示中の行を
+            // bind し直さず、後で表示されたときに古い内容のまま出るため使わない。
+            _itemsListView.Rebuild();
         }
 
         private VisualElement CreateItemElement(ToolItemState state, bool allShops)
@@ -1375,7 +1295,7 @@ namespace Dennokoworks.ToolImporter.Editor
                 {
                     SetSelected(state, evt.newValue);
                     UpdateBatchBarUI();
-                    UpdateItemList(resetPaging: false);
+                    UpdateItemList();
                 });
                 card.Add(toggle);
             }

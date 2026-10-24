@@ -106,8 +106,10 @@
         <ui:Label name="empty-message-label" text="" class="empty-message-text" />
     </ui:VisualElement>
 
-    <!-- メインスクロール領域 (無限スクロール型: 一覧をバッチ分割で順次追加) -->
-    <ui:ScrollView name="items-scroll-view" class="dennoko-scroll items-scroll-view" />
+    <!-- メインスクロール領域 (仮想化: 表示範囲の行だけ生成する。行は C# で動的生成) -->
+    <ui:ListView name="items-list-view" class="dennoko-scroll items-list-view"
+        virtualization-method="DynamicHeight" selection-type="None"
+        show-border="false" show-alternating-row-backgrounds="None" />
 
     <ui:VisualElement class="dennoko-separator" />
 

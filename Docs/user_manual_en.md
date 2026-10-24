@@ -1,6 +1,6 @@
-# dennokoworks Tool Importer (BLM Integration) User Manual
+# dennokoworks Asset Importer (BLM Integration) User Manual
 
-**dennokoworks Tool Importer** is a Unity editor extension that integrates with **BOOTH Library Manager (BLM)**, allowing you to easily browse, search, and import downloaded Unity packages (`.unitypackage`) directly into your Unity project.
+**dennokoworks Asset Importer** is a Unity editor extension that integrates with **BOOTH Library Manager (BLM)**, allowing you to easily browse, search, and import downloaded Unity packages (`.unitypackage`) directly into your Unity project.
 
 ---
 
@@ -39,7 +39,7 @@
 - **Flexible Shop Filtering**: View all assets (`All Shops`), restrict to `dennokoworks` tools (with automatic version checking), or filter by custom registered BOOTH shops.
 - **Batch Import**: Use Multi-Select Mode to check multiple assets and install them consecutively.
 - **Smooth Infinite Scrolling**: High-performance chunked loading (batches of 30) ensures fast launch and smooth scrolling even with libraries containing hundreds of assets.
-- **Automatic Version Checks**: For `dennokoworks` tools and the Tool Importer itself, remote GitHub release versions are checked automatically to notify you when updates are available.
+- **Automatic Version Checks**: For `dennokoworks` tools and the Asset Importer itself, remote GitHub release versions are checked automatically to notify you when updates are available.
 - **Bilingual Support**: Instant toggle between Japanese and English.
 
 ---
@@ -63,7 +63,7 @@
 
 1. Click the provided VPM repository link to register the repository in VCC.
 2. Open your target project under "Manage Project" in VCC.
-3. Locate **dennokoworks Tool Importer** in the package list and click the `+` button to install it.
+3. Locate **dennokoworks Asset Importer** in the package list and click the `+` button to install it.
 
 ---
 
@@ -72,10 +72,8 @@
 From the Unity editor menu bar, select:
 
 ```text
-dennokoworks > Tool Importer
+dennokoworks > Asset Importer
 ```
-
-*(You can also launch it via `Tools > dennokoworks > Tool Importer`)*
 
 ---
 
@@ -85,7 +83,7 @@ The main window consists of the following sections:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ [dennokoworks Importer]  [Update available vX.X.X ↻] [EN/JA]│ ← Top Bar
+│ [dennokoworks Asset Importer] [Update available vX.X.X ↻] [EN/JA]│ ← Top Bar
 │ Shop: [ dennokoworks ▾ ]  [＋]  [Manual]  [Settings]        │ ← Navigation Bar
 ├─────────────────────────────────────────────────────────────┤
 │ (Settings Panel: BLM path override, clear cache)            │ ← Shown on "Settings"

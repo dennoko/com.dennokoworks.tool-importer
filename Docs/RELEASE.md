@@ -1,6 +1,6 @@
 # VPM パッケージ リリース手順書 (RELEASE.md)
 
-本ドキュメントは、**dennokoworks Tool Importer** を VPM パッケージとしてリリース（新規公開・バージョンアップ）する手順をまとめた運用マニュアルです。
+本ドキュメントは、**dennokoworks Asset Importer** を VPM パッケージとしてリリース（新規公開・バージョンアップ）する手順をまとめた運用マニュアルです。
 
 ヒューマンエラー（不要ファイルの混入、ZIPの階層構造ミス、ハッシュ計算ミス、URLの記載ミス）を防ぐため、**自動ビルドスクリプト** を使用した手順に統一されています。
 
@@ -97,7 +97,7 @@ VPM リポジトリ配信用リポジトリ（`vpm-repos`）の **`index.json`**
       "versions": {
         "0.1.0": {
           "name": "com.dennokoworks.tool-importer",
-          "displayName": "dennokoworks Tool Importer",
+          "displayName": "dennokoworks Asset Importer",
           "version": "0.1.0",
           "description": "BOOTH Library Manager (BLM) と連携し、購入済み dennokoworks 製ツールのUnityプロジェクトへの簡単インポートおよび最新バージョン確認を行うエディタ拡張ツールです。",
           "unity": "2022.3",
@@ -132,10 +132,10 @@ VPM リポジトリ配信用リポジトリ（`vpm-repos`）の **`index.json`**
 1. **別のテスト用 Unity プロジェクト**（または新規作成したアバター・ワールドプロジェクト）を用意します。
 2. VCC の **Settings > Packages** でリポジトリ更新ボタン（矢印アイコン）を押し、最新メタデータを読み込みます。
 3. テスト用プロジェクトの **Manage Project** を開きます。
-4. 一覧から `dennokoworks Tool Importer` を探し、`+` ボタンを押して追加します。
+4. 一覧から `dennokoworks Asset Importer` を探し、`+` ボタンを押して追加します。
 5. プロジェクトを開き、以下を確認します：
    - コンパイルエラーなく Unity が起動すること
-   - メニューバーに `dennokoworks > Tool Importer`（および `Tools > dennokoworks > Tool Importer`）が表示され、ウィンドウが正常に動作すること
+   - メニューバーに `dennokoworks > Asset Importer` が表示され、ウィンドウが正常に動作すること
 
 ---
 

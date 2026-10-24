@@ -1,4 +1,4 @@
-# dennokoworks Tool Importer (BLM連携)
+# dennokoworks Asset Importer (BLM連携)
 
 BOOTH Library Manager (BLM) でダウンロードした BOOTH アイテム（`.unitypackage`）を Unity エディタ内から簡単にプロジェクトへインポートするための VPM 対応パッケージです。dennokoworks 製ツールについては最新バージョンの確認もできます。
 
@@ -13,7 +13,7 @@ BOOTH Library Manager (BLM) でダウンロードした BOOTH アイテム（`.u
 - **ワンクリックインポート**: `.unitypackage` をインポート。複数のパッケージ（バージョン）がある場合は一覧から入れるものをチェックして選択
 - **まとめてインポート**: 「複数選択モード」でチェックしたアイテムを順番にインポート（確認ダイアログの有無も切り替え可能）
 - **BOOTH 商品ページ・フォルダ導線**: BLM のアイテム情報から BOOTH の商品ページや保存先フォルダを直接開く
-- **最新バージョン確認**: dennokoworks 製ツールの GitHub 最新バージョン比較および Tool Importer 自体のアップデート通知に対応
+- **最新バージョン確認**: dennokoworks 製ツールの GitHub 最新バージョン比較および Asset Importer 自体のアップデート通知に対応
 - **日英バイリンガル対応**: ツールバー右上のボタンから日本語 / 英語をいつでも切り替え可能
 
 ---
@@ -26,7 +26,7 @@ BOOTH Library Manager (BLM) でダウンロードした BOOTH アイテム（`.u
 ---
 
 ## 使い方
-1. Unity メニューバーの `dennokoworks > Tool Importer`（または `Tools > dennokoworks > Tool Importer`）を開きます。ツールバーの「マニュアル」から使い方マニュアル（PDF）を開けます。
+1. Unity メニューバーの `dennokoworks > Asset Importer` を開きます。ツールバーの「マニュアル」から使い方マニュアル（PDF）を開けます。
 2. BLM が自動検出されない場合は、ツールバーの「設定」から `data.db` とアイテム保存先フォルダを指定します。
 3. ツールバーのショップ名をクリックして表示するショップを切り替えます。「すべてのショップ」を選ぶとすべてのショップのアイテムを表示します。「＋」ボタンでショップを追加・管理できます。
 4. 一覧から「インポート」を押すと、Unity のインポートダイアログが開きます。

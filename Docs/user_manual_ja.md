@@ -1,6 +1,6 @@
-# dennokoworks Tool Importer (BLM連携) ユーザーマニュアル
+# dennokoworks Asset Importer (BLM連携) ユーザーマニュアル
 
-**dennokoworks Tool Importer** は、**BOOTH Library Manager (BLM)** と連携し、ダウンロード済みの Unity パッケージ（`.unitypackage`）を Unity エディタ内から簡単に検索・インポートできる Unity エディタ拡張ツールです。
+**dennokoworks Asset Importer** は、**BOOTH Library Manager (BLM)** と連携し、ダウンロード済みの Unity パッケージ（`.unitypackage`）を Unity エディタ内から簡単に検索・インポートできる Unity エディタ拡張ツールです。
 
 ---
 
@@ -39,7 +39,7 @@
 - **柔軟なショップ絞り込み**: デフォルトの全ショップ表示（すべてのショップ）のほか、`dennokoworks` や任意の BOOTH ショップ単位でアイテムを絞り込めます。
 - **まとめてインポート**: 「複数選択モード」でチェックした複数のアセットをワンクリックで順次インポートできます。
 - **軽快な無限スクロール**: 数百件を超える大量のアセットがあっても、起動やスクロールが快適に行えるバッチ分割読み込み（無限スクロール）を採用しています。
-- **アップデート確認**: dennokoworks 製ツールの場合、最新バージョンが公開されているかを自動チェックし、更新案内を表示します。Tool Importer 自体の更新もヘッダーから確認できます。
+- **アップデート確認**: dennokoworks 製ツールの場合、最新バージョンが公開されているかを自動チェックし、更新案内を表示します。Asset Importer 自体の更新もヘッダーから確認できます。
 - **日英バイリンガル対応**: ワンクリックで日本語 / 英語表示を切り替えられます。
 
 ---
@@ -63,7 +63,7 @@
 
 1. 配布されている VPM リポジトリ追加リンクをクリックし、VCC にリポジトリを登録します。
 2. 対象プロジェクトの「Manage Project」を開きます。
-3. パッケージ一覧から **dennokoworks Tool Importer** を探し、`+` ボタンを押してプロジェクトに追加します。
+3. パッケージ一覧から **dennokoworks Asset Importer** を探し、`+` ボタンを押してプロジェクトに追加します。
 
 ---
 
@@ -72,20 +72,18 @@
 Unity エディタの上部メニューバーから以下を選択します。
 
 ```text
-dennokoworks > Tool Importer
+dennokoworks > Asset Importer
 ```
-
-※ `Tools > dennokoworks > Tool Importer` からも開けます。
 
 ---
 
 ## 5. 画面構成・UI解説
 
-dennokoworks Tool Importer のメインウィンドウは以下のエリアで構成されています。
+dennokoworks Asset Importer のメインウィンドウは以下のエリアで構成されています。
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ [dennokoworks Importer]  [更新あり vX.X.X ↻]       [EN / JA]│ ← トップバー
+│ [dennokoworks Asset Importer]  [更新あり vX.X.X ↻] [EN / JA]│ ← トップバー
 │ ショップ: [ dennokoworks ▾ ]  [＋]  [マニュアル]  [設定]      │ ← ナビゲーションバー
 ├─────────────────────────────────────────────────────────────┤
 │ (設定パネル: BLM パス指定・キャッシュクリア)                     │ ← 「設定」クリック時

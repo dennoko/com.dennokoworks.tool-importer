@@ -65,8 +65,8 @@ namespace Dennokoworks.ToolImporter.Editor
         private static readonly Dictionary<string, string> StringsJa = new Dictionary<string, string>
         {
             // ヘッダー
-            { "WindowTitle", "dennokoworks Importer" },
-            { "HeaderTitle", "dennokoworks Importer" },
+            { "WindowTitle", "dennokoworks Asset Importer" },
+            { "HeaderTitle", "dennokoworks Asset Importer" },
             { "LangButton", "EN" },
             { "LangButtonTooltip", "英語に切り替えます" },
             { "ReloadVersionTooltip", "アップデートを再確認" },
@@ -204,8 +204,8 @@ namespace Dennokoworks.ToolImporter.Editor
         private static readonly Dictionary<string, string> StringsEn = new Dictionary<string, string>
         {
             // Header
-            { "WindowTitle", "dennokoworks Importer" },
-            { "HeaderTitle", "dennokoworks Importer" },
+            { "WindowTitle", "dennokoworks Asset Importer" },
+            { "HeaderTitle", "dennokoworks Asset Importer" },
             { "LangButton", "JA" },
             { "LangButtonTooltip", "Switch to Japanese" },
             { "ReloadVersionTooltip", "Recheck for updates" },
@@ -321,7 +321,7 @@ namespace Dennokoworks.ToolImporter.Editor
             { "ShopManageDefaultLabel", "Default:" },
             { "ShopManageDefaultAll", "None (Show All Shops)" },
             { "PopupLatestSuffix", "  (Latest)" },
-            { "ShopManageReopen", "Please reopen this dialog from the Tool Importer window." },
+            { "ShopManageReopen", "Please reopen this dialog from the Asset Importer window." },
             { "ShopManageDefaultBadge", "[Default]" },
             { "ShopManageSetDefault", "Default" },
             { "ShopManageOpen", "Open" },

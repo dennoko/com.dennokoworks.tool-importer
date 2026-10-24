@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # VPM Package Release Zip Generator (Bash / Git Bash / macOS / Linux)
-# dennokoworks Tool Importer
+# dennokoworks Asset Importer
 # ==============================================================================
 
 set -euo pipefail

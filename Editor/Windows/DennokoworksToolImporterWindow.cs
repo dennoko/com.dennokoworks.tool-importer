@@ -9,7 +9,7 @@ namespace Dennokoworks.ToolImporter.Editor
 {
     public class DennokoworksToolImporterWindow : EditorWindow
     {
-        private const string WindowTitle = "dennokoworks Importer";
+        private const string WindowTitle = "dennokoworks Asset Importer";
         private const string ShowSettingsPrefKey = "Dennokoworks.ToolImporter.ShowSettings";
         private const string MultiSelectPrefKey = "Dennokoworks.ToolImporter.MultiSelect";
         private const string BatchInteractivePrefKey = "Dennokoworks.ToolImporter.BatchInteractive";
@@ -135,8 +135,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private Label _statusLabel;
         private IVisualElementScheduledItem _statusResetSchedule;
 
-        [MenuItem("Tools/dennokoworks/Tool Importer", false, 100)]
-        [MenuItem("dennokoworks/Tool Importer", false, 0)]
+        [MenuItem("dennokoworks/Asset Importer", false, 0)]
         public static void Open()
         {
             var window = GetWindow<DennokoworksToolImporterWindow>(WindowTitle);

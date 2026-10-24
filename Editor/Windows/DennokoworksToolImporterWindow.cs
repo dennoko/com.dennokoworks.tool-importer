@@ -427,10 +427,13 @@ namespace Dennokoworks.ToolImporter.Editor
             {
                 _searchField.RegisterValueChangedCallback(evt =>
                 {
-                    // ラベル (Label) の文字を変えたときの ChangeEvent<string> も子要素から上がってくるので、
-                    // 入力欄自身の値の変更だけを拾う（拾うと言語切替で _search がラベル文字になる）
-                    if (evt.target != _searchField) return;
-                    _search = evt.newValue;
+                    // ラベル (Label) の文字を変えたときの ChangeEvent<string> もここに届く（言語切替で
+                    // ラベルが「検索」⇔「Search」に変わる）。TextField は composite root なので、子要素の
+                    // イベントでも evt.target が TextField に書き換わり見分けられない。evt.newValue は使わず
+                    // 入力欄の値そのものを読む。
+                    var value = _searchField.value ?? "";
+                    if (value == _search) return;
+                    _search = value;
                     UpdateItemList();
                 });
             }

@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # VPM Package Release Zip Generator
 # dennokoworks Asset Importer
 # ==============================================================================
@@ -100,7 +100,7 @@ foreach ($file in $files) {
 }
 
 $zipArchive.Dispose()
-Write-Host "計 $count 個のファイルを追加しました。" -ForegroundColor Green
+Write-Host ('計 ' + $count + ' 個のファイルを追加しました。') -ForegroundColor Green
 
 # SHA256 ハッシュ計算
 $sha256 = (Get-FileHash -Algorithm SHA256 $zipFilePath).Hash.ToLower()
@@ -115,10 +115,10 @@ try {
     $copied = $false
 }
 
-Write-Host ""
-Write-Host "========================================" -ForegroundColor Green
-Write-Host "  ZIP 生成が完了しました！" -ForegroundColor Green
-Write-Host "========================================" -ForegroundColor Green
+Write-Host ''
+Write-Host '========================================' -ForegroundColor Green
+Write-Host '  ZIP 生成が完了しました！' -ForegroundColor Green
+Write-Host '========================================' -ForegroundColor Green
 Write-Host ('出力先 : ' + $zipFilePath)
 Write-Host ('サイズ : ' + $fileSizeMb + ' MB (' + $fileSize + ' bytes)')
 Write-Host ('SHA256 : ' + $sha256) -ForegroundColor Magenta

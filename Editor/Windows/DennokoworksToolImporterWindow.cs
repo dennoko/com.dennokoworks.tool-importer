@@ -58,9 +58,16 @@ namespace Dennokoworks.ToolImporter.Editor
         /// <summary>サムネイルを読み込み待ち・表示中の行を参照し続ける間隔（ThumbnailCache の取り消し猶予 1 秒より短く）。</summary>
         private const long ThumbnailTouchIntervalMs = 500;
 
+        /// <summary>拡大プレビューの大きさ（一覧のサムネイルの縦横に対する倍率）。</summary>
+        private const float ThumbnailPreviewScale = 3f;
+        /// <summary>拡大プレビューとサムネイルの間隔 (px)。</summary>
+        private const float ThumbnailPreviewGap = 4f;
+
         private readonly List<ListRow> _rows = new List<ListRow>();
         /// <summary>いま行に表示されているサムネイルの Image と URL。行が範囲外になったら外す。</summary>
         private readonly Dictionary<Image, string> _boundThumbnails = new Dictionary<Image, string>();
+        /// <summary>マウスオーバー中のサムネイル。無ければ null。</summary>
+        private Image _hoveredThumbnail;
         private bool _allShopsInList;
 
         private ToolImporterVersionChecker.Result _versionResult =
@@ -130,6 +137,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private VisualElement _emptyMessageCard;
         private Label _emptyMessageLabel;
         private ListView _itemsListView;
+        private Image _thumbnailPreview;
 
         private Button _openBoothShopBtn;
         private Label _statusLabel;
@@ -313,6 +321,7 @@ namespace Dennokoworks.ToolImporter.Editor
             _emptyMessageCard = _root.Q<VisualElement>("empty-message-card");
             _emptyMessageLabel = _root.Q<Label>("empty-message-label");
             _itemsListView = _root.Q<ListView>("items-list-view");
+            _thumbnailPreview = _root.Q<Image>("thumbnail-preview");
             SetupItemsListView();
 
             _openBoothShopBtn = _root.Q<Button>("open-booth-shop-button");
@@ -1192,6 +1201,11 @@ namespace Dennokoworks.ToolImporter.Editor
             // 読み込み待ちのサムネイルを参照し続ける（参照が途切れると ThumbnailCache が取り消す）。
             // 表示中のテクスチャも参照して、上限超過時の破棄対象から外す。
             _itemsListView.schedule.Execute(TouchBoundThumbnails).Every(ThumbnailTouchIntervalMs);
+
+            // スクロールやウィンドウ外への移動ではサムネイルの PointerLeave が届かないことがあるため閉じる。
+            var scrollView = _itemsListView.Q<ScrollView>();
+            if (scrollView != null) scrollView.verticalScroller.valueChanged += _ => HideThumbnailPreview();
+            _root.RegisterCallback<MouseLeaveWindowEvent>(_ => HideThumbnailPreview());
         }
 
         private VisualElement CreateRowElement(ListRow row)
@@ -1212,6 +1226,7 @@ namespace Dennokoworks.ToolImporter.Editor
             {
                 _boundThumbnails.Remove(img);
                 img.image = null;
+                if (img == _hoveredThumbnail) HideThumbnailPreview();
             });
         }
 
@@ -1223,6 +1238,53 @@ namespace Dennokoworks.ToolImporter.Editor
                 var tex = ThumbnailCache.Get(kv.Value);
                 if (tex != null && kv.Key.image != tex) kv.Key.image = tex;
             }
+            // マウスオーバー中に読み込みが終わったら拡大プレビューを出す。
+            if (_hoveredThumbnail != null) UpdateThumbnailPreview();
+        }
+
+        private void ShowThumbnailPreview(Image thumb)
+        {
+            _hoveredThumbnail = thumb;
+            UpdateThumbnailPreview();
+        }
+
+        private void HideThumbnailPreview()
+        {
+            _hoveredThumbnail = null;
+            UpdateThumbnailPreview();
+        }
+
+        /// <summary>マウスオーバー中のサムネイルの右隣に、縦横 3 倍の拡大プレビューを出す（未読み込みなら出さない）。</summary>
+        private void UpdateThumbnailPreview()
+        {
+            if (_thumbnailPreview == null) return;
+
+            var thumb = _hoveredThumbnail;
+            Texture tex = thumb != null ? thumb.image : null;
+            if (thumb == null || thumb.panel == null || tex == null)
+            {
+                _thumbnailPreview.style.display = DisplayStyle.None;
+                _thumbnailPreview.image = null;
+                return;
+            }
+
+            var thumbRect = _root.WorldToLocal(thumb.worldBound);
+            float width = thumbRect.width * ThumbnailPreviewScale;
+            float height = thumbRect.height * ThumbnailPreviewScale;
+
+            // 右隣に収まらなければ左隣に出し、上下はウィンドウ内に収める。
+            float left = thumbRect.xMax + ThumbnailPreviewGap;
+            if (left + width > _root.layout.width) left = thumbRect.xMin - ThumbnailPreviewGap - width;
+            float top = thumbRect.center.y - height / 2f;
+            top = Mathf.Clamp(top, 0f, Mathf.Max(0f, _root.layout.height - height));
+
+            _thumbnailPreview.image = tex;
+            _thumbnailPreview.style.left = Mathf.Max(0f, left);
+            _thumbnailPreview.style.top = top;
+            _thumbnailPreview.style.width = width;
+            _thumbnailPreview.style.height = height;
+            _thumbnailPreview.style.display = DisplayStyle.Flex;
+            _thumbnailPreview.BringToFront();
         }
 
         private void UpdateItemList()
@@ -1323,6 +1385,11 @@ namespace Dennokoworks.ToolImporter.Editor
             {
                 thumb.image = ThumbnailCache.Get(item.ThumbnailUrl);
                 _boundThumbnails[thumb] = item.ThumbnailUrl;
+                thumb.RegisterCallback<PointerEnterEvent>(_ => ShowThumbnailPreview(thumb));
+                thumb.RegisterCallback<PointerLeaveEvent>(_ =>
+                {
+                    if (_hoveredThumbnail == thumb) HideThumbnailPreview();
+                });
             }
             card.Add(thumb);
 

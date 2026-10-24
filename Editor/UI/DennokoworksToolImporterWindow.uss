@@ -552,3 +552,13 @@
     padding: 0 6px;
     margin: 0;
 }
+
+/* ─── サムネイル拡大プレビュー ─────────────────────────── */
+.dennoko-root .thumbnail-preview {
+    position: absolute;
+    border-color: var(--dennoko-outline);
+    border-width: 1px;
+    border-radius: 4px;
+    background-color: var(--dennoko-surface-2);
+    -unity-background-scale-mode: scale-and-crop;
+}

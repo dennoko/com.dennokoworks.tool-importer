@@ -121,4 +121,7 @@
     <!-- ステータスバー -->
     <ui:Label name="status-label" text="Ready" class="dennoko-status" />
 
+    <!-- サムネイル拡大プレビュー (一覧のサムネイルにマウスオーバー中だけ表示。位置とサイズは C# で設定) -->
+    <ui:Image name="thumbnail-preview" class="thumbnail-preview" picking-mode="Ignore" style="display: none;" />
+
 </ui:UXML>

@@ -11,7 +11,7 @@ namespace Dennokoworks.ToolImporter.Editor
     internal static class ToolImporterVersion
     {
         private const string VersionJsonGuid = "3891dc446b10482aa73de4b6c8e3c8b9";
-        private const string FallbackVersion = "0.2.1";
+        private const string FallbackVersion = "0.3.0";
         private static string _currentCache = null;
 
         internal static string Current

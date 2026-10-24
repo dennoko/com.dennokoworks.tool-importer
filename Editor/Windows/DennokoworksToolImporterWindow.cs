@@ -73,7 +73,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private bool _allShopsInList;
 
         private ToolImporterVersionChecker.Result _versionResult =
-            new ToolImporterVersionChecker.Result { State = ToolImporterVersionChecker.State.Checking, LocalVersion = "0.2.1" };
+            new ToolImporterVersionChecker.Result { State = ToolImporterVersionChecker.State.Checking, LocalVersion = "0.3.0" };
 
         internal static bool BatchInteractive
         {

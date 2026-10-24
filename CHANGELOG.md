@@ -5,9 +5,11 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-10-24
 ### Added
 - 一覧のサムネイルにマウスオーバーすると、縦横 3 倍の拡大サムネイルを右隣に表示
+- まとめてインポート時および複数パッケージ選択時に、チェックを入れた順序通りにインポートキューへ投入する機能を追加（マテリアル先行→FBX後攻などの導入順序の制御に対応）
+- 設定パネルに「単体インポート時も確認ダイアログを表示する」オプションを追加（デフォルトはオフで、単体インポート時も確認ダイアログなしで即座にインポートを実行）
 
 ## [0.2.1] - 2026-10-24
 ### Changed

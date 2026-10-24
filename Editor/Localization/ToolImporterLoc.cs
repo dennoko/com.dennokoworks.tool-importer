@@ -129,6 +129,7 @@ namespace Dennokoworks.ToolImporter.Editor
 
             // アイテム一覧
             { "ItemListHeader", "アイテム一覧 ({0}): {1} 件" },
+            { "LoadMoreItems", "さらに読み込む (残り {0} 件)" },
             { "ScanningCount", "パッケージ解析中 ({0})" },
             { "HiddenItemsTooltip", ".unitypackage が見つからないアイテム {0} 件は表示していません（未ダウンロード・Unity 用以外など）。" },
             { "HiddenArchivesTooltip", "\nうち {0} 件は zip が未展開の可能性があります。BLM で展開してから「一覧を再読み込み」を押してください。" },
@@ -268,6 +269,7 @@ namespace Dennokoworks.ToolImporter.Editor
 
             // Item List
             { "ItemListHeader", "Item List ({0}): {1} items" },
+            { "LoadMoreItems", "Load more ({0} remaining)" },
             { "ScanningCount", "Analyzing packages ({0})" },
             { "HiddenItemsTooltip", "{0} items without .unitypackage are hidden (not downloaded, not for Unity, etc.)." },
             { "HiddenArchivesTooltip", "\n{0} items may contain unextracted zip files. Please extract in BLM and reload." },

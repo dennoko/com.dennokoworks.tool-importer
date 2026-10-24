@@ -21,7 +21,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private const int MaxTextures = 150;
 
         /// <summary>この秒数以上 Get されていない読み込み待ちは、表示範囲外になったとみなして取り消す。</summary>
-        private const double WaitingExpireSeconds = 1.0;
+        private const double WaitingExpireSeconds = 30.0;
 
         private static readonly Dictionary<string, Texture2D> Textures = new Dictionary<string, Texture2D>();
         /// <summary>URL ごとの最終参照時刻（EditorApplication.timeSinceStartup）。</summary>

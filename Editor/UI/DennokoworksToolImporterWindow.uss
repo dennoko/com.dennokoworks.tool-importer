@@ -376,17 +376,23 @@
     -unity-font-style: bold;
 }
 
-/* ─── アイテム一覧 (ListView) ──────────────────────────────
-   行の背景はカード側で描くため、ListView 既定の行背景・ホバー色
-   (エディタテーマ依存) を打ち消す */
-.dennoko-root .items-list-view {
+/* ─── アイテム一覧 (ScrollView) ────────────────────────────── */
+.dennoko-root .items-scroll-view {
     background-color: var(--dennoko-surface-0);
+    flex-grow: 1;
+    flex-shrink: 1;
 }
 
-.dennoko-root .items-list-view .unity-collection-view__item,
-.dennoko-root .items-list-view .unity-collection-view__item:hover,
-.dennoko-root .items-list-view .unity-collection-view__item:checked {
-    background-color: var(--dennoko-surface-0);
+.dennoko-root .load-more-container {
+    padding: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+.dennoko-root .load-more-button {
+    font-size: 11px;
+    padding: 3px 14px;
+    min-height: 22px;
 }
 
 /* ─── アイテムカード (標準 helpBox に匹敵するコンパクト設計) ─ */

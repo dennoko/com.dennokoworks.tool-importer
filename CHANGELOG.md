@@ -6,9 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.2.1] - 2026-10-24
+### Changed
+- ツール名を **dennokoworks Tool Importer** から **dennokoworks Asset Importer** に変更（あらゆるアセットの導入に適した名称に統一）
+- ウィンドウを開くメニュー項目を `dennokoworks > Asset Importer` に集約し、表示優先度を最上位（`-100`）に設定（`Tools > dennokoworks` メニューを削除）
+- アイテム一覧の描画方式を `ListView (DynamicHeight)` から `ScrollView` による**無限スクロール（30件ごとのバッチ分割読み込み）**に移行
+
 ### Fixed
-- 言語を切り替えるとアイテム一覧が表示されなくなり、ショップ変更や再読み込みでも回復しない問題（検索欄のラベル変更を検索文字の入力として扱っていた）
-- 一覧の更新後にスクロールすると、画面外にあった行が更新前の内容のまま表示されることがある問題
+- 言語切り替え時やショップ切り替え時にアイテム一覧が消失・再読み込み不能になる Unity 2022.3 UI Toolkit の内部プール破綻問題を根本解決
+- サムネイルキャッシュ要求の待機制限（`WaitingExpireSeconds`）を延長し、画像ロード完了時にカードへ確実に反映されるよう改善
+- 検索欄のプレースホルダー・ラベル変更が検索文字の入力イベントとして誤認される問題を修正
+
+### Added
+- 英語版ユーザーマニュアル（`Docs/user_manual_en.md` / `Docs/user_manual_en.pdf`）を追加
+- UI 言語が英語モードの場合、同梱の英語版 PDF マニュアルを優先して開く処理を追加（未作成時は日本語版へフォールバック）
+- ユーザーマニュアル（日・英）を最新の UI 構成・機能に合わせて全面改訂（絵文字や特殊装飾記号が「□」として表示される仕様の解説を追加）
 
 ## [0.2.0] - 2026-10-24
 ### Added

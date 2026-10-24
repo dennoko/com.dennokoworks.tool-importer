@@ -159,15 +159,15 @@ namespace Dennokoworks.ToolImporter.Editor
             return InstallState.NotInstalled;
         }
 
-        /// <summary>インポートダイアログ付きでパッケージをインポートする。</summary>
-        public static void ImportPackage(string packagePath)
+        /// <summary>パッケージをインポートする。</summary>
+        public static void ImportPackage(string packagePath, bool interactive = false)
         {
             if (string.IsNullOrEmpty(packagePath) || !File.Exists(packagePath))
             {
                 EditorUtility.DisplayDialog("インポート", $"パッケージが見つかりません。\n{packagePath}", "OK");
                 return;
             }
-            AssetDatabase.ImportPackage(packagePath, true);
+            AssetDatabase.ImportPackage(packagePath, interactive);
         }
 
         /// <summary>キャッシュを破棄して全パッケージを再解析させる。</summary>

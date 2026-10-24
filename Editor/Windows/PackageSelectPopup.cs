@@ -19,6 +19,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private readonly string _title;
         private readonly List<PackageFile> _packages;
         private readonly bool[] _checked;
+        private readonly List<int> _checkOrder = new List<int>();
         private readonly Action<List<PackageFile>> _onImport;
         private readonly Action<List<PackageFile>> _onSetBatch;
         private Vector2 _scroll;
@@ -33,9 +34,22 @@ namespace Dennokoworks.ToolImporter.Editor
 
             _checked = new bool[packages.Count];
             bool hasInitial = initialPaths != null && initialPaths.Count > 0;
-            for (int i = 0; i < packages.Count; i++)
+            if (hasInitial)
             {
-                _checked[i] = hasInitial ? initialPaths.Contains(packages[i].Path) : i == 0;
+                foreach (var path in initialPaths)
+                {
+                    int idx = packages.FindIndex(p => p.Path == path);
+                    if (idx >= 0 && !_checkOrder.Contains(idx))
+                    {
+                        _checked[idx] = true;
+                        _checkOrder.Add(idx);
+                    }
+                }
+            }
+            else if (packages.Count > 0)
+            {
+                _checked[0] = true;
+                _checkOrder.Add(0);
             }
         }
 
@@ -108,7 +122,14 @@ namespace Dennokoworks.ToolImporter.Editor
             var name = package.RelativePath;
             if (index == 0 && _packages.Count > 1) name += ToolImporterLoc.Tr("PopupLatestSuffix");
 
-            _checked[index] = EditorGUILayout.ToggleLeft(new GUIContent(name, package.Path), _checked[index]);
+            bool prev = _checked[index];
+            bool next = EditorGUILayout.ToggleLeft(new GUIContent(name, package.Path), prev);
+            if (prev != next)
+            {
+                _checked[index] = next;
+                _checkOrder.Remove(index);
+                if (next) _checkOrder.Add(index);
+            }
 
             var details = new List<string>();
             if (!string.IsNullOrEmpty(package.FileVersion)) details.Add(DennokoVersionChecker.Display(package.FileVersion));
@@ -130,16 +151,38 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private void SetAll(bool value)
         {
-            for (int i = 0; i < _checked.Length; i++) _checked[i] = value;
+            _checkOrder.Clear();
+            if (value)
+            {
+                for (int i = _checked.Length - 1; i >= 0; i--)
+                {
+                    _checked[i] = true;
+                    _checkOrder.Add(i);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < _checked.Length; i++) _checked[i] = false;
+            }
         }
 
-        /// <summary>選択されたパッケージを古い順（一覧の逆順）で返す。新しいものが最後に上書きされるようにするため。</summary>
+        /// <summary>選択されたパッケージをチェックされた順で返す。</summary>
         private List<PackageFile> GetSelected()
         {
             var result = new List<PackageFile>();
-            for (int i = _packages.Count - 1; i >= 0; i--)
+            foreach (var idx in _checkOrder)
             {
-                if (_checked[i]) result.Add(_packages[i]);
+                if (idx >= 0 && idx < _packages.Count && _checked[idx])
+                {
+                    result.Add(_packages[idx]);
+                }
+            }
+            for (int i = 0; i < _checked.Length; i++)
+            {
+                if (_checked[i] && !_checkOrder.Contains(i))
+                {
+                    result.Add(_packages[i]);
+                }
             }
             return result;
         }

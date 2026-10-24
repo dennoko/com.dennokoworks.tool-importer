@@ -41,6 +41,9 @@
             <ui:Button name="item-dir-auto-button" text="自動" class="header-button" />
             <ui:Label name="item-dir-status" text="自動検出" class="setting-status" />
         </ui:VisualElement>
+        <ui:VisualElement class="setting-row" style="margin-top: 4px;">
+            <ui:Toggle name="single-interactive-toggle" text="単体インポート時も確認ダイアログを表示する" />
+        </ui:VisualElement>
         <ui:VisualElement style="flex-direction: row; justify-content: flex-end; margin-top: 4px;">
             <ui:Button name="clear-cache-button" text="パッケージ解析キャッシュを削除" class="header-button" />
         </ui:VisualElement>

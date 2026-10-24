@@ -13,6 +13,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private const string ShowSettingsPrefKey = "Dennokoworks.ToolImporter.ShowSettings";
         private const string MultiSelectPrefKey = "Dennokoworks.ToolImporter.MultiSelect";
         private const string BatchInteractivePrefKey = "Dennokoworks.ToolImporter.BatchInteractive";
+        private const string SingleInteractivePrefKey = "Dennokoworks.ToolImporter.SingleInteractive";
 
         private const string UXML_GUID = "04e7376de2b6464da001498249c38f69";
         private const string USS_THEME_GUID = "717c098cc0ab4281b2672274b79d3489";
@@ -47,6 +48,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private ImportFilter _importFilter;
 
         private readonly Dictionary<string, List<string>> _selection = new Dictionary<string, List<string>>();
+        private readonly List<string> _selectionOrder = new List<string>();
         /// <summary>一覧の 1 行。BLM のアイテム・「その他の導入済みツール」見出し・そのツールのいずれか。</summary>
         private sealed class ListRow
         {
@@ -79,6 +81,12 @@ namespace Dennokoworks.ToolImporter.Editor
             set { if (value != BatchInteractive) EditorPrefs.SetBool(BatchInteractivePrefKey, value); }
         }
 
+        internal static bool SingleInteractive
+        {
+            get => EditorPrefs.GetBool(SingleInteractivePrefKey, false);
+            set { if (value != SingleInteractive) EditorPrefs.SetBool(SingleInteractivePrefKey, value); }
+        }
+
         // ─── UI Toolkit 要素参照 ──────────────────────────────────────────
         private VisualElement _root;
         private Label _titleLabel;
@@ -104,6 +112,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private Button _itemDirAutoBtn;
         private Label _itemDirStatus;
         private Button _clearCacheBtn;
+        private Toggle _singleInteractiveToggle;
 
         private VisualElement _loadErrorContainer;
         private Label _loadErrorLabel;
@@ -288,6 +297,7 @@ namespace Dennokoworks.ToolImporter.Editor
             _itemDirAutoBtn = _root.Q<Button>("item-dir-auto-button");
             _itemDirStatus = _root.Q<Label>("item-dir-status");
             _clearCacheBtn = _root.Q<Button>("clear-cache-button");
+            _singleInteractiveToggle = _root.Q<Toggle>("single-interactive-toggle");
 
             _loadErrorContainer = _root.Q<VisualElement>("load-error-container");
             _loadErrorLabel = _root.Q<Label>("load-error-label");
@@ -422,6 +432,12 @@ namespace Dennokoworks.ToolImporter.Editor
                 };
             }
 
+            if (_singleInteractiveToggle != null)
+            {
+                _singleInteractiveToggle.value = SingleInteractive;
+                _singleInteractiveToggle.RegisterValueChangedCallback(evt => SingleInteractive = evt.newValue);
+            }
+
             if (_checkRemoteBtn != null) _checkRemoteBtn.clicked += CheckAllRemoteVersions;
             if (_reloadListBtn != null)
             {
@@ -456,7 +472,11 @@ namespace Dennokoworks.ToolImporter.Editor
                 {
                     _multiSelect = evt.newValue;
                     EditorPrefs.SetBool(MultiSelectPrefKey, _multiSelect);
-                    if (!_multiSelect) _selection.Clear();
+                    if (!_multiSelect)
+                    {
+                        _selection.Clear();
+                        _selectionOrder.Clear();
+                    }
                     UpdateBatchBarUI();
                     UpdateItemList();
                 });
@@ -493,6 +513,7 @@ namespace Dennokoworks.ToolImporter.Editor
                 _batchDeselectAllBtn.clicked += () =>
                 {
                     _selection.Clear();
+                    _selectionOrder.Clear();
                     UpdateBatchBarUI();
                     UpdateItemList();
                 };
@@ -554,6 +575,11 @@ namespace Dennokoworks.ToolImporter.Editor
                 _itemDirAutoBtn.tooltip = ToolImporterLoc.Tr("AutoTooltip");
             }
             if (_clearCacheBtn != null) _clearCacheBtn.text = ToolImporterLoc.Tr("ClearCache");
+            if (_singleInteractiveToggle != null)
+            {
+                _singleInteractiveToggle.text = ToolImporterLoc.Tr("SingleInteractive");
+                _singleInteractiveToggle.tooltip = ToolImporterLoc.Tr("SingleInteractiveTooltip");
+            }
 
             if (_reloadListBtn != null) _reloadListBtn.text = ToolImporterLoc.Tr("ReloadList");
             if (_searchField != null)
@@ -743,27 +769,40 @@ namespace Dennokoworks.ToolImporter.Editor
             }
             _selection.Clear();
             foreach (var kv in valid) _selection[kv.Key] = kv.Value;
+            _selectionOrder.RemoveAll(id => !_selection.ContainsKey(id));
         }
 
         private void SetSelected(ToolItemState state, bool selected)
         {
+            var id = state.Item.RegisteredId;
             if (selected && state.LatestPackage != null)
             {
-                if (!_selection.ContainsKey(state.Item.RegisteredId))
-                    _selection[state.Item.RegisteredId] = new List<string> { state.LatestPackage.Path };
+                if (!_selection.ContainsKey(id))
+                    _selection[id] = new List<string> { state.LatestPackage.Path };
+                _selectionOrder.Remove(id);
+                _selectionOrder.Add(id);
             }
             else
             {
-                _selection.Remove(state.Item.RegisteredId);
+                _selection.Remove(id);
+                _selectionOrder.Remove(id);
             }
         }
 
         private void SetSelectedPackages(ToolItemState state, List<PackageFile> packages)
         {
+            var id = state.Item.RegisteredId;
             if (packages == null || packages.Count == 0)
-                _selection.Remove(state.Item.RegisteredId);
+            {
+                _selection.Remove(id);
+                _selectionOrder.Remove(id);
+            }
             else
-                _selection[state.Item.RegisteredId] = packages.ConvertAll(p => p.Path);
+            {
+                _selection[id] = packages.ConvertAll(p => p.Path);
+                _selectionOrder.Remove(id);
+                _selectionOrder.Add(id);
+            }
             UpdateBatchBarUI();
             UpdateItemList();
         }
@@ -890,9 +929,11 @@ namespace Dennokoworks.ToolImporter.Editor
         private void EnqueueSelection()
         {
             var entries = new List<ImportQueue.Entry>();
-            foreach (var state in _items)
+            foreach (var id in _selectionOrder)
             {
-                if (!_selection.TryGetValue(state.Item.RegisteredId, out var paths)) continue;
+                if (!_selection.TryGetValue(id, out var paths)) continue;
+                var state = _items.Find(s => s.Item.RegisteredId == id);
+                if (state == null) continue;
                 foreach (var path in paths)
                 {
                     var package = state.Packages.Find(p => p.Path == path);
@@ -903,6 +944,7 @@ namespace Dennokoworks.ToolImporter.Editor
 
             ImportQueue.Enqueue(entries, BatchInteractive);
             _selection.Clear();
+            _selectionOrder.Clear();
             UpdateBatchBarUI();
             UpdateItemList();
         }
@@ -923,7 +965,7 @@ namespace Dennokoworks.ToolImporter.Editor
             if (packages.Count == 1)
             {
                 var path = packages[0].Path;
-                EditorApplication.delayCall += () => PackageImporter.ImportPackage(path);
+                EditorApplication.delayCall += () => PackageImporter.ImportPackage(path, SingleInteractive);
                 return;
             }
 
@@ -1089,6 +1131,8 @@ namespace Dennokoworks.ToolImporter.Editor
                     _itemDirStatus.text = itemDirManual ? ToolImporterLoc.Tr("ManualStatus") : ToolImporterLoc.Tr("AutoStatus");
                 if (_itemDirAutoBtn != null)
                     _itemDirAutoBtn.SetEnabled(itemDirManual);
+                if (_singleInteractiveToggle != null)
+                    _singleInteractiveToggle.value = SingleInteractive;
             }
         }
 
@@ -1514,7 +1558,7 @@ namespace Dennokoworks.ToolImporter.Editor
             {
                 if (!multiple)
                 {
-                    PackageImporter.ImportPackage(latest.Path);
+                    PackageImporter.ImportPackage(latest.Path, SingleInteractive);
                     return;
                 }
 

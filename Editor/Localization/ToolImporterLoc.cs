@@ -93,6 +93,8 @@ namespace Dennokoworks.ToolImporter.Editor
             { "SelectDbDialogTitle", "BLM の data.db を選択" },
             { "SelectDirDialogTitle", "BLM のアイテム保存先フォルダを選択" },
             { "ClearCache", "パッケージ解析キャッシュを削除" },
+            { "SingleInteractive", "単体インポート時も確認ダイアログを表示する" },
+            { "SingleInteractiveTooltip", "オンにすると 1 件インポート時も Unity 標準の確認ダイアログを表示します（オフの場合はダイアログをスキップして即座にインポートします）" },
             { "NotDetected", "(未検出)" },
 
             // 操作バー
@@ -232,6 +234,8 @@ namespace Dennokoworks.ToolImporter.Editor
             { "SelectDbDialogTitle", "Select BLM data.db" },
             { "SelectDirDialogTitle", "Select BLM Item Directory" },
             { "ClearCache", "Clear Package Cache" },
+            { "SingleInteractive", "Show Confirmation Dialog for Single Import" },
+            { "SingleInteractiveTooltip", "When enabled, shows Unity's standard import dialog even for single-package imports (when disabled, skips the dialog and imports immediately)" },
             { "NotDetected", "(Not detected)" },
 
             // Action Bar

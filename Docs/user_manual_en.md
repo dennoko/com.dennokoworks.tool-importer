@@ -18,6 +18,7 @@
    - [Default Shop Setting](#default-shop-setting)
 8. [Browsing & Operating Item Cards](#8-browsing--operating-item-cards)
    - [Keyword Search & Status Filtering](#keyword-search--status-filtering)
+   - [Thumbnail Zoom Preview](#thumbnail-zoom-preview)
    - [Infinite Scrolling](#infinite-scrolling)
    - [Import Buttons and Status Indication](#import-buttons-and-status-indication)
    - [Warning Badge (Hidden & Unextracted Items)](#warning-badge-hidden--unextracted-items)
@@ -116,6 +117,7 @@ When launched, the tool automatically looks for BLM's database file (`data.db`) 
 - **When Detected Automatically**: Ready to use immediately without manual configuration.
 - **When Not Found**: The "Settings" panel expands automatically with path setup prompts. Click "Browse..." to select your `data.db` or item folder. Click "Auto" at any time to revert to auto-detection.
 - **Clear Analysis Cache**: If package inspection cache gets out of sync, click "Clear package analysis cache" in the Settings panel.
+- **Single Import Confirmation Dialog**: Enabling "Show Confirmation Dialog for Single Import" will prompt Unity's standard import confirmation dialog even for single package imports (disabled by default for fast, uninterrupted import).
 
 > [!TIP]
 > **Default `data.db` Locations**
@@ -156,6 +158,9 @@ At the top of the Shop Management dialog, configure "Default shop on startup" to
   - **Update Available**: Show items that have a newer version available in BLM.
   - **Imported**: Show only items already imported.
 
+### Thumbnail Zoom Preview
+Hovering your mouse over an item's thumbnail displays an enlarged (~3x) thumbnail preview to its right, allowing you to quickly inspect fine textures and costume designs directly from the list.
+
 ### Infinite Scrolling
 To maintain high responsiveness, the list initially loads 30 items. As you scroll near the bottom, the next 30 items are appended automatically. You can also click the "Load more (N remaining)" button at the end of the list.
 
@@ -182,18 +187,22 @@ Hover over the badge to view details:
 
 ### Single Package Import
 1. Click the **Import** button on the item card.
-2. The standard Unity package import dialog will open. Review files and click "Import".
+2. By default, the package will import immediately without showing Unity's confirmation dialog.
+   *To review the file list before importing, turn on "Show Confirmation Dialog for Single Import" in the Settings panel.*
 
 ### Multi-Package Selection Popup
-If an item contains multiple package files (e.g. variants, multiple version archives), clicking the Import button opens a package selection popup. Select your desired package and proceed.
+If an item contains multiple package files (e.g. variants, multiple version archives), clicking the Import button opens a package selection popup.
+Select your desired packages and click "Import".
+*Packages are queued in the exact order you check them. For example, checking Material first and FBX second ensures files are imported in proper dependency order.*
 
 ### Batch Import
 1. Check **Multi-select Mode** on the action bar to reveal item checkboxes.
 2. Select target items using checkboxes:
+   - Items are enqueued in the exact order you check them.
    - "Select All": Select all visible items.
    - "Select Updates": Select only items with newer versions available.
    - "Deselect All": Clear selection.
-3. **Interactive Mode**: When checked, Unity's import confirmation dialog will prompt for each package. When unchecked, packages import continuously.
+3. **Interactive Mode**: When checked, Unity's import confirmation dialog will prompt for each package. When unchecked (default), packages import continuously.
 4. Click **Batch Import (N items)** to begin sequential installation.
 5. A progress card appears with options to "Skip Current Item" or "Cancel Remaining".
 

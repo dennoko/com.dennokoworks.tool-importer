@@ -5,6 +5,11 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Fixed
+- 言語を切り替えるとアイテム一覧が表示されなくなり、ショップ変更や再読み込みでも回復しない問題
+- 一覧の更新後にスクロールすると、画面外にあった行が更新前の内容のまま表示されることがある問題
+
 ## [0.2.0] - 2026-10-24
 ### Added
 - dennokoworks フローティングデザイン（`dennokoworks_color_schema`）に準拠した UI Toolkit (UXML / USS) による UI リメイク

@@ -61,6 +61,8 @@ namespace Dennokoworks.ToolImporter.Editor
         /// <summary>いま行に表示されているサムネイルの Image と URL。行が範囲外になったら外す。</summary>
         private readonly Dictionary<Image, string> _boundThumbnails = new Dictionary<Image, string>();
         private bool _allShopsInList;
+        /// <summary>次の UpdateItemList で ListView を作り直す（言語切替・再読み込みなど、全行が入れ替わるとき）。</summary>
+        private bool _listViewResetPending;
 
         private ToolImporterVersionChecker.Result _versionResult =
             new ToolImporterVersionChecker.Result { State = ToolImporterVersionChecker.State.Checking, LocalVersion = "0.2.0" };
@@ -575,6 +577,8 @@ namespace Dennokoworks.ToolImporter.Editor
             UpdateActionBarUI();
             UpdateBatchBarUI();
             UpdateQueueUI();
+            // 行の文言が変わって全行の高さが一斉に変わるため、ListView を作り直す
+            _listViewResetPending = true;
             UpdateItemList();
             UpdateFooterUI();
         }
@@ -651,6 +655,7 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private void Reload()
         {
+            _listViewResetPending = true;
             _items.Clear();
             _loadError = null;
             _dbPath = null;
@@ -1271,8 +1276,45 @@ namespace Dennokoworks.ToolImporter.Editor
             foreach (var state in visibleItems) _rows.Add(new ListRow { State = state });
             AppendOtherLocalToolRows();
 
-            // 表示中の行だけ作り直す（範囲外の行は要素を持たない）
-            _itemsListView.RefreshItems();
+            if (_listViewResetPending)
+            {
+                _listViewResetPending = false;
+                RecreateItemsListView();
+            }
+
+            // 行要素をすべて bind し直す。RefreshItems は DynamicHeight だと非表示中の行を
+            // bind し直さず、後で表示されたときに古い内容のまま出るため使わない。
+            _itemsListView.Rebuild();
+        }
+
+        /// <summary>
+        /// ListView を新しいインスタンスに置き換える。DynamicHeight の内部状態（行の高さキャッシュ・
+        /// 先頭行・スクロール位置）は Rebuild でも消えず、全行の高さが一斉に変わると食い違ったまま
+        /// 残って一覧が空になることがあるため、全行が入れ替わるときはインスタンスごと捨てる。
+        /// </summary>
+        private void RecreateItemsListView()
+        {
+            var old = _itemsListView;
+            var parent = old?.parent;
+            if (parent == null) return;
+
+            var fresh = new ListView
+            {
+                name = old.name,
+                virtualizationMethod = old.virtualizationMethod,
+                selectionType = old.selectionType,
+                showBorder = old.showBorder,
+                showAlternatingRowBackgrounds = old.showAlternatingRowBackgrounds,
+            };
+            foreach (var className in new List<string>(old.GetClasses())) fresh.AddToClassList(className);
+
+            parent.Insert(parent.IndexOf(old), fresh);
+            old.itemsSource = null;
+            old.RemoveFromHierarchy();
+            _boundThumbnails.Clear();
+
+            _itemsListView = fresh;
+            SetupItemsListView();
         }
 
         private VisualElement CreateItemElement(ToolItemState state, bool allShops)

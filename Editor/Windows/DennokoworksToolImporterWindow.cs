@@ -135,7 +135,7 @@ namespace Dennokoworks.ToolImporter.Editor
         private Label _statusLabel;
         private IVisualElementScheduledItem _statusResetSchedule;
 
-        [MenuItem("dennokoworks/Asset Importer", false, 0)]
+        [MenuItem("dennokoworks/Asset Importer", false, -100)]
         public static void Open()
         {
             var window = GetWindow<DennokoworksToolImporterWindow>(WindowTitle);

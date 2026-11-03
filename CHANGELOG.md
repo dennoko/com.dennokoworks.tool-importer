@@ -5,7 +5,7 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-11-03
 ### Added
 - ショップ選択の横に「リスト:」ドロップダウンを追加。BLM で作成したリストを選ぶと、選択中のショップのアイテムのうちそのリストに入っているものだけを表示（デフォルトは `None` で絞り込みなし。選択は `EditorPrefs` に保存し、BLM 側でリストが削除された場合は `None` に戻す。スマートリストは対象外）
 

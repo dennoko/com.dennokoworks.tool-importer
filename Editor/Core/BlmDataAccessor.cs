@@ -143,6 +143,40 @@ namespace Dennokoworks.ToolImporter.Editor
         }
 
         /// <summary>
+        /// BLM のリスト（ユーザーが作成したもの）と所属アイテムの一覧（タイトル順）。
+        /// lists テーブルが無い古い BLM では空を返す。スマートリストは対象外。
+        /// </summary>
+        public static List<BlmList> GetLists(string dbPath)
+        {
+            const string tableCheck = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name IN ('lists', 'list_items')";
+            const string sql =
+                "SELECT l.id, l.title, li.item_id " +
+                "FROM lists l " +
+                "LEFT JOIN list_items li ON li.list_id = l.id " +
+                "ORDER BY l.title COLLATE NOCASE, l.id";
+
+            var result = new List<BlmList>();
+            WithReader(dbPath, reader =>
+            {
+                result.Clear();
+                if (reader.Query(tableCheck).Count < 2) return;
+
+                BlmList current = null;
+                foreach (var row in reader.Query(sql))
+                {
+                    if (!(row[0] is long id)) continue;
+                    if (current == null || current.Id != id)
+                    {
+                        current = new BlmList { Id = id, Title = row[1] as string ?? id.ToString() };
+                        result.Add(current);
+                    }
+                    if (row[2] is string itemId && !string.IsNullOrEmpty(itemId)) current.ItemIds.Add(itemId);
+                }
+            });
+            return result;
+        }
+
+        /// <summary>
         /// item_directory_path は BLOB で、中身は UTF-16LE 文字列（例: "K\0:\0\\\0..."）。
         /// 念のため TEXT / UTF-8 の BLOB にも対応する。
         /// </summary>
@@ -179,6 +213,17 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private static List<object[]> Query(string dbPath, string sql, params object[] args)
         {
+            List<object[]> rows = null;
+            WithReader(dbPath, reader => rows = reader.Query(sql, args));
+            return rows;
+        }
+
+        /// <summary>
+        /// DB を開いて <paramref name="action"/> を実行する。複数のクエリを 1 回の接続（一時コピーも 1 回）で済ませたいときに使う。
+        /// 直接読めなかった場合は一時コピーで <paramref name="action"/> をやり直すため、action は再実行しても安全に作ること。
+        /// </summary>
+        private static void WithReader(string dbPath, Action<SqliteReader> action)
+        {
             if (string.IsNullOrEmpty(dbPath) || !File.Exists(dbPath))
                 throw new FileNotFoundException("BLM のデータベースが見つかりません。", dbPath);
             if (!SqliteReader.IsSupported)
@@ -188,7 +233,7 @@ namespace Dennokoworks.ToolImporter.Editor
             {
                 using (var reader = SqliteReader.Open(dbPath))
                 {
-                    return reader.Query(sql, args);
+                    action(reader);
                 }
             }
             catch (SqliteException e)
@@ -200,7 +245,7 @@ namespace Dennokoworks.ToolImporter.Editor
                 {
                     using (var reader = SqliteReader.Open(copy))
                     {
-                        return reader.Query(sql, args);
+                        action(reader);
                     }
                 }
                 finally

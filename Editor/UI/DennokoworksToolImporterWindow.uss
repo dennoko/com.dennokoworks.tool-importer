@@ -148,6 +148,15 @@
     padding: 0 4px;
 }
 
+.dennoko-root .list-prefix-label {
+    margin-left: 6px;
+}
+
+.dennoko-root .list-select-button {
+    min-width: 60px;
+    max-width: 160px;
+}
+
 .dennoko-root .mini-icon-button {
     min-width: 20px;
     height: 20px;

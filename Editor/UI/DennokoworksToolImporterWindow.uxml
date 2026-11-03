@@ -17,6 +17,8 @@
             <ui:Label name="shop-prefix-label" text="ショップ:" class="shop-prefix-label" />
             <ui:Button name="shop-dropdown-button" text="dennokoworks ▾" class="header-button shop-select-button" />
             <ui:Button name="add-shop-button" text="＋" class="header-button mini-icon-button" tooltip="ショップを追加・管理" />
+            <ui:Label name="list-prefix-label" text="リスト:" class="shop-prefix-label list-prefix-label" />
+            <ui:Button name="list-dropdown-button" text="None ▾" class="header-button shop-select-button list-select-button" />
         </ui:VisualElement>
         <ui:VisualElement class="shop-bar-right">
             <ui:Button name="manual-button" text="マニュアル" class="header-button" />

@@ -85,7 +85,7 @@ The main window consists of the following sections:
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │ [dennokoworks Asset Importer] [Update available vX.X.X ↻] [EN/JA]│ ← Top Bar
-│ Shop: [ dennokoworks ▾ ]  [＋]  [Manual]  [Settings]        │ ← Navigation Bar
+│ Shop: [ dennokoworks ▾ ] [＋] List: [ None ▾ ] [Manual] [Settings] │ ← Navigation Bar
 ├─────────────────────────────────────────────────────────────┤
 │ (Settings Panel: BLM path override, clear cache)            │ ← Shown on "Settings"
 ├─────────────────────────────────────────────────────────────┤
@@ -151,6 +151,10 @@ At the top of the Shop Management dialog, configure "Default shop on startup" to
 ## 8. Browsing & Operating Item Cards
 
 ### Keyword Search & Status Filtering
+- **Filter by BLM List**: Pick a list you created in BOOTH Library Manager from "List: [ None ▾ ]" on the navigation bar to show only the items in that list.
+  - The list filter applies within the selected shop. To see every item of a list that spans multiple shops, set the shop to "None (All Shops)".
+  - Choose "None" to clear the filter. After creating or editing lists in BLM, click "Reload List".
+  - Smart lists are not supported.
 - **Keyword Search**: Type text into the search field to filter items by name and shop name in real time.
 - **Status Filter**: Click the "▼ All" dropdown button to filter by:
   - **All**: Show all items.

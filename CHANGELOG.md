@@ -5,6 +5,11 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- BOOTH でファイルが更新されていて、BLM で最新版をまだダウンロードしていないアイテムのタイトル左に「更新あり」アイコンを表示（BLM の更新通知を既読も含めて参照し、通知のファイルがアイテムフォルダにあればダウンロード済みとみなす。全ショップ・インポート状態に関わらず表示し、ツールチップに通知日時とファイル名を表示）
+- アイテム行に [Project] ボタンを追加。インポート済みアセットのフォルダを Project タブで開く（2 カラム表示では右ペインにフォルダの中身を表示し、1 カラム表示ではフォルダを展開する。GUID で現在の場所を追い、Assets 直下に複数のフォルダを作るパッケージでは候補をメニューで選択）
+
 ## [1.0.0] - 2026-11-03
 ### Added
 - ショップ選択の横に「リスト:」ドロップダウンを追加。BLM で作成したリストを選ぶと、選択中のショップのアイテムのうちそのリストに入っているものだけを表示（デフォルトは `None` で絞り込みなし。選択は `EditorPrefs` に保存し、BLM 側でリストが削除された場合は `None` に戻す。スマートリストは対象外）

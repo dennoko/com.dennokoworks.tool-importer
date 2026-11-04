@@ -449,6 +449,28 @@
     margin-bottom: 1px;
 }
 
+/* タイトル行（左に更新ありアイコンを置く） */
+.dennoko-root .item-title-row {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.dennoko-root .item-title-row .item-title {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+/* BLM の更新ありアイコン。dennokoworks のバージョン確認（警告色）と区別するため情報色にする */
+.dennoko-root .item-update-icon {
+    width: 13px;
+    min-width: 13px;
+    height: 13px;
+    margin-top: 1px;
+    margin-right: 3px;
+    flex-shrink: 0;
+    --unity-image-tint-color: var(--dennoko-semantic-info);
+}
+
 .dennoko-root .item-sub-label {
     font-size: 8.5px;
     color: var(--dennoko-text-tertiary);

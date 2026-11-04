@@ -92,6 +92,23 @@ namespace Dennokoworks.ToolImporter.Editor
         public string error;
     }
 
+    /// <summary>
+    /// BLM の更新通知（notifications の latestDownloadableAvailable）1 件。
+    /// バリエーションごとに最新の 1 件だけを保持する。
+    /// </summary>
+    internal sealed class BlmUpdateNotice
+    {
+        public long NotificationId;
+        /// <summary>booth_item_variations.id（通知 JSON の data[0]）。</summary>
+        public long VariationId;
+        /// <summary>バリエーション名（無ければ null）。</summary>
+        public string VariationName;
+        /// <summary>通知日時 (UTC)。読み取れなければ null。</summary>
+        public DateTime? CreatedAtUtc;
+        /// <summary>BOOTH で新しく公開・更新されたファイル名（通知 JSON の data[1]）。</summary>
+        public List<string> FileNames = new List<string>();
+    }
+
     /// <summary>一覧の 1 行分の表示状態。</summary>
     internal sealed class ToolItemState
     {
@@ -107,6 +124,15 @@ namespace Dennokoworks.ToolImporter.Editor
         public LocalToolVersion LocalTool;
         /// <summary>最新パッケージ内の version.json、またはファイル名のバージョン。</summary>
         public string BlmVersion;
+
+        /// <summary>
+        /// BLM に更新通知があり、最新版がまだダウンロードされていないバリエーションの通知（新しい順）。
+        /// アイテム一覧の再読み込み時に決まる。
+        /// </summary>
+        public List<BlmUpdateNotice> PendingBlmUpdates = new List<BlmUpdateNotice>();
+
+        /// <summary>BLM で最新版をダウンロードしていない更新がある。</summary>
+        public bool HasBlmUpdate => PendingBlmUpdates.Count > 0;
 
         public PackageFile LatestPackage => Packages.Count > 0 ? Packages[0] : null;
     }

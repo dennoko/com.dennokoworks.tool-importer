@@ -154,8 +154,16 @@ CREATE TABLE notifications (
    - グループ分けの結果、候補が 1 つになった場合はメニューを出さずにそのまま開く。
 
 ### 3.3 開き方
-- 対象フォルダを `Selection.activeObject` に設定し、`EditorGUIUtility.PingObject` でハイライトする。Project ウィンドウは `EditorUtility.FocusProjectWindow` で前面に出す。
-- 公開 API だけで実現する。2 カラム表示で右ペインにフォルダの中身を出すこと（内部 API `ProjectBrowser` のリフレクション）はしない。
+対象フォルダの**ある場所**（親フォルダ）ではなく、**対象フォルダを開いた状態**（中身が見える階層）を表示する。Project ウィンドウは `EditorUtility.FocusProjectWindow` で前面に出す。
+
+- **2 カラム表示**: 左のフォルダツリーで対象フォルダを選び、右ペインに中身を出す。
+  - 公開 API が無いため、内部の `UnityEditor.ProjectBrowser` をリフレクションで呼ぶ（Unity 2022.3.22f1 で存在を確認）。
+    - `ProjectBrowser.s_LastInteractedProjectBrowser`（public static フィールド）で対象のウィンドウを取る。
+    - `IsTwoColumns()`（internal）で 2 カラム表示か判定する。
+    - `SetFolderSelection(int[] selectedInstanceIDs, bool revealSelectionAndFrameLastSelected)`（internal）に対象フォルダの InstanceID と `true` を渡す。フォルダツリーでフォルダをクリックしたときと同じ処理。
+  - 対象フォルダ自体は `Selection` に入れない。入れると Project ウィンドウが親フォルダを開いて対象フォルダをハイライトし直すため。
+- **1 カラム表示**: 対象フォルダを `Selection.activeObject` に設定し、フォルダ直下の最初のアセット（名前順）を `EditorGUIUtility.PingObject` して、対象フォルダを展開した状態にする。空のフォルダなら対象フォルダ自体を Ping する。
+- **内部 API が使えない場合**（Unity のバージョン違いで見つからない・例外が出た）: 1 カラム表示と同じ処理にする。2 カラム表示でも、中のアセットを Ping すると右ペインに対象フォルダの中身が出る。例外は警告ログに出す。
 
 ### 3.4 エッジケース
 | ケース | 挙動 |
@@ -171,7 +179,6 @@ CREATE TABLE notifications (
 - 本ツール側での更新通知の既読・確認済み管理
 - アイコンをクリックしたときの動作（BOOTH / BLM を開く等）
 - BLM を外部から起動し、該当アイテムを開く導線
-- Project ウィンドウの 2 カラム表示で、フォルダの中身を右ペインに直接表示すること
 
 ---
 
@@ -188,8 +195,10 @@ CREATE TABLE notifications (
 7. ツールチップに通知日時・ファイル名（バリエーション名）が表示され、日本語 / 英語の切り替えで文言が切り替わること
 
 ### 機能 B
-1. `Assets/shop/item/...` に入るパッケージで `Assets/shop/item` が選択・ハイライトされること
+1. `Assets/shop/item/...` に入るパッケージで、`Assets/shop/item` を開いた状態（中身が見える状態）になること
+   - 2 カラム表示: フォルダツリーで `Assets/shop/item` が選ばれ、右ペインにその中身が出ること
+   - 1 カラム表示: `Assets/shop/item` が選択・展開されていること
 2. Assets 直下に複数のフォルダを作るパッケージで候補メニューが出て、選んだフォルダが開くこと
 3. インポート後にフォルダを移動しても、移動先が開くこと
 4. 未導入のアイテムではボタンが無効になっていること
-5. Project ウィンドウが 1 カラム / 2 カラム表示のどちらでも動くこと
+5. Project ウィンドウが閉じている・別のタブの裏にある状態からでも開くこと

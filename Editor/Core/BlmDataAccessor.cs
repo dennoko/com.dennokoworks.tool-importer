@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
@@ -174,6 +176,208 @@ namespace Dennokoworks.ToolImporter.Editor
                 }
             });
             return result;
+        }
+
+        /// <summary>
+        /// BOOTH のファイル更新通知（notifications の latestDownloadableAvailable）を、
+        /// 登録アイテム ID (registered_items.id) ごとに、バリエーションごとの最新 1 件だけ返す。既読の通知も含む。
+        /// notifications / booth_item_variations テーブルが無い古い BLM では空を返す。
+        /// </summary>
+        /// <remarks>
+        /// content は {"type":"latestDownloadableAvailable","data":[バリエーションID,["ファイル名",...]]} の JSON。
+        /// SQLite の JSON 関数は環境によって使えないため、C# 側で解析する。
+        /// </remarks>
+        public static Dictionary<string, List<BlmUpdateNotice>> GetLatestUpdateNotices(string dbPath)
+        {
+            const string tableCheck =
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name IN ('notifications', 'booth_item_variations')";
+            const string variationSql =
+                "SELECT v.id, v.variation_name, r.id " +
+                "FROM booth_item_variations v " +
+                "JOIN registered_items r ON r.booth_item_id = v.booth_item_id";
+            const string noticeSql =
+                "SELECT id, content, created_at FROM notifications " +
+                "WHERE content LIKE '%latestDownloadableAvailable%' " +
+                "ORDER BY id DESC";
+
+            var result = new Dictionary<string, List<BlmUpdateNotice>>();
+            WithReader(dbPath, reader =>
+            {
+                result.Clear();
+                if (reader.Query(tableCheck).Count < 2) return;
+
+                var variationNames = new Dictionary<long, string>();
+                var variationItems = new Dictionary<long, string>();
+                foreach (var row in reader.Query(variationSql))
+                {
+                    if (!(row[0] is long variationId) || !(row[2] is string registeredId) || string.IsNullOrEmpty(registeredId)) continue;
+                    variationItems[variationId] = registeredId;
+                    variationNames[variationId] = row[1] as string;
+                }
+
+                var seenVariations = new HashSet<long>();
+                foreach (var row in reader.Query(noticeSql))
+                {
+                    if (!(row[0] is long notificationId) || !(row[1] is string content)) continue;
+                    if (!TryParseDownloadableNotice(content, out var variationId, out var fileNames)) continue;
+                    // id の降順に読むので、バリエーションごとに最初に出てきたものが最新
+                    if (!seenVariations.Add(variationId)) continue;
+                    // booth_item_variations に無いバリエーションは BLM 本体でも商品を引けないため無視する
+                    if (!variationItems.TryGetValue(variationId, out var itemId)) continue;
+
+                    if (!result.TryGetValue(itemId, out var list))
+                    {
+                        list = new List<BlmUpdateNotice>();
+                        result[itemId] = list;
+                    }
+                    variationNames.TryGetValue(variationId, out var variationName);
+                    list.Add(new BlmUpdateNotice
+                    {
+                        NotificationId = notificationId,
+                        VariationId = variationId,
+                        VariationName = string.IsNullOrWhiteSpace(variationName) ? null : variationName,
+                        CreatedAtUtc = ParseUtc(row[2] as string),
+                        FileNames = fileNames,
+                    });
+                }
+            });
+            return result;
+        }
+
+        /// <summary>
+        /// 通知のうち、最新版がまだアイテムフォルダにダウンロードされていないものを返す（新しい順）。
+        /// 通知のファイルが 1 つでもアイテムフォルダの直下にあれば、そのバリエーションはダウンロード済みとみなす。
+        /// BLM は zip を拡張子を除いた名前のフォルダに展開し、それ以外はそのままのファイル名で保存する。
+        /// アイテムフォルダが無ければ、すべて未ダウンロードとする。
+        /// </summary>
+        public static List<BlmUpdateNotice> FindPendingUpdates(string itemDirectory, List<BlmUpdateNotice> notices)
+        {
+            var pending = new List<BlmUpdateNotice>();
+            if (notices == null || notices.Count == 0) return pending;
+
+            var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var dirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                if (!string.IsNullOrEmpty(itemDirectory) && Directory.Exists(itemDirectory))
+                {
+                    foreach (var f in Directory.GetFiles(itemDirectory)) files.Add(Path.GetFileName(f));
+                    foreach (var d in Directory.GetDirectories(itemDirectory)) dirs.Add(Path.GetFileName(d));
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[Tool Importer] BLM のアイテムフォルダを読み込めませんでした: {itemDirectory}\n{e.Message}");
+            }
+
+            foreach (var notice in notices)
+            {
+                if (!IsDownloaded(notice, files, dirs)) pending.Add(notice);
+            }
+            pending.Sort((a, b) => b.NotificationId.CompareTo(a.NotificationId));
+            return pending;
+        }
+
+        private static bool IsDownloaded(BlmUpdateNotice notice, HashSet<string> files, HashSet<string> dirs)
+        {
+            foreach (var name in notice.FileNames)
+            {
+                if (string.IsNullOrEmpty(name)) continue;
+                if (files.Contains(name)) return true;
+                if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                    && dirs.Contains(name.Substring(0, name.Length - ".zip".Length)))
+                    return true;
+            }
+            return false;
+        }
+
+        private static readonly Regex NoticeTypeRegex =
+            new Regex("\"type\"\\s*:\\s*\"latestDownloadableAvailable\"", RegexOptions.CultureInvariant);
+        private static readonly Regex NoticeDataRegex =
+            new Regex("\"data\"\\s*:\\s*\\[\\s*(\\d+)\\s*,\\s*\\[", RegexOptions.CultureInvariant);
+
+        /// <summary>latestDownloadableAvailable 通知の JSON から、バリエーション ID とファイル名一覧を取り出す。</summary>
+        internal static bool TryParseDownloadableNotice(string json, out long variationId, out List<string> fileNames)
+        {
+            variationId = 0;
+            fileNames = new List<string>();
+            if (string.IsNullOrEmpty(json) || !NoticeTypeRegex.IsMatch(json)) return false;
+
+            var match = NoticeDataRegex.Match(json);
+            if (!match.Success || !long.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out variationId))
+                return false;
+
+            // data[1] の文字列配列を読む
+            int i = match.Index + match.Length;
+            while (true)
+            {
+                i = SkipWhitespace(json, i);
+                if (i >= json.Length) return false;
+                if (json[i] == ']') break;
+                if (json[i] == ',') { i++; continue; }
+                if (json[i] != '"' || !TryReadJsonString(json, ref i, out var name)) return false;
+                fileNames.Add(name);
+            }
+            return true;
+        }
+
+        private static int SkipWhitespace(string s, int i)
+        {
+            while (i < s.Length && char.IsWhiteSpace(s[i])) i++;
+            return i;
+        }
+
+        /// <summary><paramref name="i"/> の位置の '"' から JSON 文字列を読み、閉じ '"' の次へ進める。</summary>
+        private static bool TryReadJsonString(string s, ref int i, out string value)
+        {
+            value = null;
+            var sb = new StringBuilder();
+            for (int p = i + 1; p < s.Length; p++)
+            {
+                char c = s[p];
+                if (c == '"')
+                {
+                    value = sb.ToString();
+                    i = p + 1;
+                    return true;
+                }
+                if (c != '\\')
+                {
+                    sb.Append(c);
+                    continue;
+                }
+                if (++p >= s.Length) return false;
+                switch (s[p])
+                {
+                    case '"': sb.Append('"'); break;
+                    case '\\': sb.Append('\\'); break;
+                    case '/': sb.Append('/'); break;
+                    case 'b': sb.Append('\b'); break;
+                    case 'f': sb.Append('\f'); break;
+                    case 'n': sb.Append('\n'); break;
+                    case 'r': sb.Append('\r'); break;
+                    case 't': sb.Append('\t'); break;
+                    case 'u':
+                        if (p + 4 >= s.Length
+                            || !int.TryParse(s.Substring(p + 1, 4), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var code))
+                            return false;
+                        sb.Append((char)code);
+                        p += 4;
+                        break;
+                    default:
+                        return false;
+                }
+            }
+            return false;
+        }
+
+        private static DateTime? ParseUtc(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return null;
+            return DateTime.TryParse(value, CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dt)
+                ? dt
+                : (DateTime?)null;
         }
 
         /// <summary>

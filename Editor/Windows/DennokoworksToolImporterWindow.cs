@@ -781,8 +781,34 @@ namespace Dennokoworks.ToolImporter.Editor
             }
 
             LoadBlmLists();
+            LoadBlmUpdates();
             PruneSelection();
             MarkStatesDirty();
+        }
+
+        /// <summary>
+        /// BLM の更新通知を読み、最新版を BLM でまだダウンロードしていないアイテムに印を付ける。
+        /// 既読の通知も対象にし、アイテムフォルダに通知のファイルがあるかで判定する。
+        /// </summary>
+        private void LoadBlmUpdates()
+        {
+            Dictionary<string, List<BlmUpdateNotice>> notices;
+            try
+            {
+                notices = BlmDataAccessor.GetLatestUpdateNotices(_dbPath);
+            }
+            catch (Exception e)
+            {
+                // 通知が読めなくてもアイテム一覧は出す
+                Debug.LogWarning($"[Tool Importer] BLM の更新通知を読み込めませんでした: {e.Message}");
+                return;
+            }
+
+            foreach (var state in _items)
+            {
+                if (notices.TryGetValue(state.Item.RegisteredId, out var list))
+                    state.PendingBlmUpdates = BlmDataAccessor.FindPendingUpdates(state.Item.ItemDirectory, list);
+            }
         }
 
         /// <summary>BLM のリスト一覧を読み直し、保存しておいたリスト指定を当てはめる。</summary>
@@ -1546,9 +1572,18 @@ namespace Dennokoworks.ToolImporter.Editor
             var body = new VisualElement();
             body.AddToClassList("item-body");
 
+            var titleRow = new VisualElement();
+            titleRow.AddToClassList("item-title-row");
+            if (state.HasBlmUpdate)
+            {
+                var updateIcon = new Image { image = GetBlmUpdateIcon(), tooltip = BuildBlmUpdateTooltip(state) };
+                updateIcon.AddToClassList("item-update-icon");
+                titleRow.Add(updateIcon);
+            }
             var title = new Label(item.Name);
             title.AddToClassList("item-title");
-            body.Add(title);
+            titleRow.Add(title);
+            body.Add(titleRow);
 
             if (allShops && !string.IsNullOrEmpty(item.ShopSubdomain))
             {
@@ -1615,11 +1650,23 @@ namespace Dennokoworks.ToolImporter.Editor
 
             var folderBtn = new Button(() => { if (state.DirectoryExists) EditorUtility.RevealInFinder(item.ItemDirectory); })
             {
-                text = ToolImporterLoc.Tr("FolderButton")
+                text = ToolImporterLoc.Tr("FolderButton"),
+                tooltip = ToolImporterLoc.Tr("FolderButtonTooltip")
             };
             folderBtn.AddToClassList("mini-button");
             folderBtn.SetEnabled(state.DirectoryExists);
             leftActions.Add(folderBtn);
+
+            var projectBtn = new Button
+            {
+                text = ToolImporterLoc.Tr("ProjectButton"),
+                tooltip = ToolImporterLoc.Tr("ProjectButtonTooltip")
+            };
+            projectBtn.clicked += () => RevealInProject(state, projectBtn);
+            projectBtn.AddToClassList("mini-button");
+            projectBtn.SetEnabled(state.InstallState == InstallState.Installed
+                || state.InstallState == InstallState.PartiallyInstalled);
+            leftActions.Add(projectBtn);
 
             actionsRow.Add(leftActions);
 
@@ -1682,6 +1729,91 @@ namespace Dennokoworks.ToolImporter.Editor
 
             return importBtn;
         }
+
+        #region BLM update icon
+
+        /// <summary>更新ありアイコンの組み込みアイコン（Package Manager の「ダウンロード可能」）。ウィンドウはダークテーマ固定なので Dark 版を使う。</summary>
+        private const string BlmUpdateIconPath = "Icons/PackageManager/Dark/Download-Available.png";
+        private const string BlmUpdateIconFallback = "console.infoicon.sml";
+        private static Texture _blmUpdateIcon;
+
+        private static Texture GetBlmUpdateIcon()
+        {
+            if (_blmUpdateIcon != null) return _blmUpdateIcon;
+            _blmUpdateIcon = EditorGUIUtility.Load(BlmUpdateIconPath) as Texture;
+            if (_blmUpdateIcon == null) _blmUpdateIcon = EditorGUIUtility.IconContent(BlmUpdateIconFallback)?.image;
+            return _blmUpdateIcon;
+        }
+
+        /// <summary>更新ありアイコンのツールチップ。未ダウンロードのバリエーションごとに通知日時とファイル名を 1 行ずつ並べる。</summary>
+        private static string BuildBlmUpdateTooltip(ToolItemState state)
+        {
+            var sb = new System.Text.StringBuilder(ToolImporterLoc.Tr("BlmUpdateTooltip"));
+            foreach (var notice in state.PendingBlmUpdates)
+            {
+                var files = string.Join(", ", notice.FileNames);
+                if (!string.IsNullOrEmpty(notice.VariationName)) files = $"{notice.VariationName}: {files}";
+                var date = notice.CreatedAtUtc.HasValue
+                    ? notice.CreatedAtUtc.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)
+                    : null;
+                sb.Append('\n').Append(date != null
+                    ? ToolImporterLoc.Tr("BlmUpdateTooltipEntry", date, files)
+                    : ToolImporterLoc.Tr("BlmUpdateTooltipEntryNoDate", files));
+            }
+            return sb.ToString();
+        }
+
+        #endregion
+
+        #region Project で表示
+
+        /// <summary>
+        /// 最新パッケージのアセットがあるフォルダを Project ウィンドウで表示する。
+        /// 候補が複数（Assets 直下に複数のフォルダを作るパッケージ等）ならメニューで選ばせる。
+        /// </summary>
+        private void RevealInProject(ToolItemState state, VisualElement anchor)
+        {
+            var scan = PackageImporter.GetScanResult(state.LatestPackage);
+            var candidates = scan != null && scan.IsValid
+                ? ProjectFolderLocator.FindCandidates(scan.guids)
+                : new List<ProjectFolderLocator.Candidate>();
+
+            if (candidates.Count == 0)
+            {
+                OnProjectAssetsNotFound();
+                return;
+            }
+
+            if (candidates.Count == 1)
+            {
+                RevealProjectFolder(candidates[0].Path);
+                return;
+            }
+
+            var menu = new GenericMenu();
+            foreach (var candidate in candidates)
+            {
+                var path = candidate.Path;
+                // GenericMenu は "/" をサブメニューの区切りとして扱うため全角に置き換える
+                var text = ToolImporterLoc.Tr("ProjectFolderMenuItem", path.Replace('/', '／'), candidate.AssetCount);
+                menu.AddItem(new GUIContent(text), false, () => RevealProjectFolder(path));
+            }
+            menu.DropDown(anchor.worldBound);
+        }
+
+        private void RevealProjectFolder(string path)
+        {
+            if (!ProjectFolderLocator.Reveal(path)) OnProjectAssetsNotFound();
+        }
+
+        /// <summary>ボタンを押すまでの間にアセットが削除された等で表示できなかった。導入状態を再計算する。</summary>
+        private void OnProjectAssetsNotFound()
+        {
+            SetStatus(ToolImporterLoc.Tr("ProjectAssetsNotFound"), StatusType.Error);
+            MarkStatesDirty();
+        }
+
+        #endregion
 
         private void AppendOtherLocalToolRows()
         {

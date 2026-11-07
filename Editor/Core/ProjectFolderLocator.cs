@@ -95,61 +95,161 @@ namespace Dennokoworks.ToolImporter.Editor
             return result;
         }
 
-        /// <summary>
-        /// Project ウィンドウで、フォルダを開いた状態（フォルダの中身が見える状態）にする。フォルダを読み込めなければ false。
-        /// 2 カラム表示では左のフォルダツリーでそのフォルダを選び、右ペインに中身を出す。
-        /// 1 カラム表示（または内部 API が使えない場合）は、フォルダを選択し、中の最初のアセットを Ping してフォルダを展開する。
-        /// </summary>
-        public static bool Reveal(string folderPath)
+        /// <summary><see cref="Reveal"/> の結果。</summary>
+        internal enum RevealResult
         {
-            if (string.IsNullOrEmpty(folderPath)) return false;
+            /// <summary>Project ウィンドウを前面に出し、フォルダを開く処理を始めた（フォルダを開くのは次のエディタ更新）。</summary>
+            Started,
+            /// <summary>フォルダを読み込めなかった（削除済み等）。</summary>
+            FolderNotFound,
+            /// <summary>Project ウィンドウ（タブ）が 1 つも開かれていない。</summary>
+            NoProjectWindow,
+        }
+
+        private const BindingFlags InstanceFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        private const BindingFlags StaticFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+
+        /// <summary>SetFolderSelection が失敗したときに、次のエディタ更新でやり直す回数。</summary>
+        private const int FolderSelectionRetries = 1;
+
+        /// <summary>
+        /// Project ウィンドウで、フォルダを開いた状態（フォルダの中身が見える状態）にする。
+        /// 2 カラム表示では左のフォルダツリーでそのフォルダを選び、右ペインに中身を出す。
+        /// 1 カラム表示は、フォルダを選択し、中の最初のアセットを Ping してフォルダを展開する。
+        /// </summary>
+        /// <remarks>
+        /// 別のタブの裏に隠れていた Project ウィンドウは、前面に出した直後はまだ描画・初期化されていないことがあるため、
+        /// ウィンドウを前面に出すところまでをここで行い、フォルダを開くのは次のエディタ更新 (delayCall) で行う。
+        /// </remarks>
+        public static RevealResult Reveal(string folderPath)
+        {
+            if (string.IsNullOrEmpty(folderPath)) return RevealResult.FolderNotFound;
             var folder = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(folderPath);
-            if (folder == null) return false;
+            if (folder == null) return RevealResult.FolderNotFound;
 
-            EditorUtility.FocusProjectWindow();
-            if (TryShowFolderContentsInTwoColumns(folder)) return true;
+            var browserType = typeof(EditorWindow).Assembly.GetType("UnityEditor.ProjectBrowser");
+            if (browserType == null)
+            {
+                // 内部 API が無い Unity: 公開 API だけで開く。表示モードが分からないので選択は変えずに Ping だけ行う
+                EditorUtility.FocusProjectWindow();
+                PingFolderContents(folderPath, folder, selectFolder: false);
+                return RevealResult.Started;
+            }
 
-            Selection.activeObject = folder;
-            var child = FindFirstChild(folderPath);
-            EditorGUIUtility.PingObject(child != null ? child : folder);
-            return true;
+            var browser = FindProjectBrowser(browserType);
+            if (browser == null) return RevealResult.NoProjectWindow;
+
+            // EditorUtility.FocusProjectWindow は前面に出すウィンドウを自分で選ぶため、操作対象と食い違わないよう同じインスタンスを前面に出す
+            browser.Focus();
+            EditorApplication.delayCall += () => ShowFolder(browser, folderPath, FolderSelectionRetries);
+            return RevealResult.Started;
         }
 
         /// <summary>
-        /// 2 カラム表示の Project ウィンドウで、フォルダツリーのフォルダ選択を変えて右ペインに中身を出す。
-        /// 公開 API が無いため内部の ProjectBrowser をリフレクションで呼ぶ（Unity 2022.3 で確認）。
-        /// 1 カラム表示・Project ウィンドウが無い・API が変わっていた場合は false。
+        /// 操作対象の Project ウィンドウ。最後に操作したものを優先し、無ければ開いているもののうち最初の 1 つ。1 つも無ければ null。
+        /// s_LastInteractedProjectBrowser は static なので、ドメインリロード後は Project ウィンドウにフォーカスが当たるまで null になる。
+        /// </summary>
+        private static EditorWindow FindProjectBrowser(Type browserType)
+        {
+            try
+            {
+                if (browserType.GetField("s_LastInteractedProjectBrowser", StaticFlags)?.GetValue(null) is EditorWindow last && last != null)
+                    return last;
+            }
+            catch (Exception)
+            {
+                // フィールドが変わっていても、下の検索で見つける
+            }
+
+            foreach (var obj in Resources.FindObjectsOfTypeAll(browserType))
+            {
+                if (obj is EditorWindow window && window != null) return window;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 前面に出した Project ウィンドウでフォルダを開く。2 カラム表示で内部 API が失敗した場合は、次のエディタ更新でやり直し、
+        /// それでも失敗したら Ping で表示する。
+        /// </summary>
+        private static void ShowFolder(EditorWindow browser, string folderPath, int retriesLeft)
+        {
+            // 待つ間にウィンドウが閉じられた・フォルダが消えた場合は何もしない
+            if (browser == null) return;
+            var folder = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(folderPath);
+            if (folder == null) return;
+
+            bool? twoColumns = IsTwoColumns(browser);
+            if (twoColumns == true)
+            {
+                var error = TrySetFolderSelection(browser, folder);
+                if (error == null) return;
+
+                if (retriesLeft > 0)
+                {
+                    EditorApplication.delayCall += () => ShowFolder(browser, folderPath, retriesLeft - 1);
+                    return;
+                }
+                Debug.LogWarning($"[Tool Importer] Project ウィンドウでフォルダを開けなかったため、Ping で表示します: {error.Message}");
+            }
+
+            // 2 カラム表示でフォルダ自体を Selection に入れると、後から届く選択変更の処理で親フォルダが開き直されるため、
+            // 選択を変えるのは 1 カラム表示と分かっているときだけにする
+            PingFolderContents(folderPath, folder, selectFolder: twoColumns == false);
+        }
+
+        /// <summary>Project ウィンドウが 2 カラム表示か。内部 API が使えず判定できなければ null。</summary>
+        private static bool? IsTwoColumns(EditorWindow browser)
+        {
+            try
+            {
+                var method = browser.GetType().GetMethod("IsTwoColumns", InstanceFlags, null, Type.EmptyTypes, null);
+                return method?.Invoke(browser, null) is bool twoColumns ? twoColumns : (bool?)null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 2 カラム表示の Project ウィンドウで、フォルダツリーのフォルダ選択を変えて右ペインに中身を出す。成功すれば null、失敗すればその例外。
+        /// 公開 API が無いため内部の ProjectBrowser.SetFolderSelection をリフレクションで呼ぶ（Unity 2022.3 で確認）。
         /// </summary>
         /// <remarks>
         /// フォルダ自体を Selection に入れると、ProjectBrowser が親フォルダを開いてそのフォルダをハイライトし直すため、選択は変えない。
         /// </remarks>
-        private static bool TryShowFolderContentsInTwoColumns(UnityEngine.Object folder)
+        private static Exception TrySetFolderSelection(EditorWindow browser, UnityEngine.Object folder)
         {
             try
             {
-                var browserType = typeof(EditorWindow).Assembly.GetType("UnityEditor.ProjectBrowser");
-                if (browserType == null) return false;
-
-                var browser = browserType
-                    .GetField("s_LastInteractedProjectBrowser", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
-                    ?.GetValue(null);
-                if (browser == null) return false;
-
-                const BindingFlags instance = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-                var isTwoColumns = browserType.GetMethod("IsTwoColumns", instance, null, Type.EmptyTypes, null);
-                var setFolderSelection = browserType.GetMethod("SetFolderSelection", instance, null,
+                var method = browser.GetType().GetMethod("SetFolderSelection", InstanceFlags, null,
                     new[] { typeof(int[]), typeof(bool) }, null);
-                if (isTwoColumns == null || setFolderSelection == null) return false;
-                if (!(isTwoColumns.Invoke(browser, null) is bool twoColumns) || !twoColumns) return false;
+                if (method == null) return new MissingMethodException("UnityEditor.ProjectBrowser", "SetFolderSelection");
 
-                setFolderSelection.Invoke(browser, new object[] { new[] { folder.GetInstanceID() }, true });
-                return true;
+                method.Invoke(browser, new object[] { new[] { folder.GetInstanceID() }, true });
+                return null;
+            }
+            catch (TargetInvocationException e)
+            {
+                // 呼び出し先で出た例外は TargetInvocationException に包まれるので、中身を返す
+                return e.InnerException ?? e;
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[Tool Importer] Project ウィンドウでフォルダを開けなかったため、Ping で表示します: {e.Message}");
-                return false;
+                return e;
             }
+        }
+
+        /// <summary>
+        /// フォルダ直下の最初のアセットを Ping してフォルダを展開する（空のフォルダならフォルダ自体を Ping する）。
+        /// selectFolder が true ならフォルダを選択もする（1 カラム表示用）。
+        /// </summary>
+        private static void PingFolderContents(string folderPath, UnityEngine.Object folder, bool selectFolder)
+        {
+            if (selectFolder) Selection.activeObject = folder;
+            var child = FindFirstChild(folderPath);
+            EditorGUIUtility.PingObject(child != null ? child : folder);
         }
 
         /// <summary>フォルダ直下の最初のアセット（名前順）。空のフォルダなら null。</summary>

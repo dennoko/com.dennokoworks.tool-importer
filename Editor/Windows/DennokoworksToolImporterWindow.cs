@@ -1774,7 +1774,15 @@ namespace Dennokoworks.ToolImporter.Editor
         private void RevealInProject(ToolItemState state, VisualElement anchor)
         {
             var scan = PackageImporter.GetScanResult(state.LatestPackage);
-            var candidates = scan != null && scan.IsValid
+            if (scan == null)
+            {
+                // 一覧を読み込んだ後にパッケージが差し替わった（BLM で新しい版をダウンロードした等）ため、解析し直している
+                SetStatus(ToolImporterLoc.Tr("ProjectScanPending"), StatusType.Info);
+                MarkStatesDirty();
+                return;
+            }
+
+            var candidates = scan.IsValid
                 ? ProjectFolderLocator.FindCandidates(scan.guids)
                 : new List<ProjectFolderLocator.Candidate>();
 
@@ -1803,7 +1811,15 @@ namespace Dennokoworks.ToolImporter.Editor
 
         private void RevealProjectFolder(string path)
         {
-            if (!ProjectFolderLocator.Reveal(path)) OnProjectAssetsNotFound();
+            switch (ProjectFolderLocator.Reveal(path))
+            {
+                case ProjectFolderLocator.RevealResult.FolderNotFound:
+                    OnProjectAssetsNotFound();
+                    break;
+                case ProjectFolderLocator.RevealResult.NoProjectWindow:
+                    Debug.LogError($"[Tool Importer] Project タブが開かれていないため、フォルダを表示できません。Window > General > Project で Project タブを開いてから、もう一度押してください。（表示しようとしたフォルダ: {path}）");
+                    break;
+            }
         }
 
         /// <summary>ボタンを押すまでの間にアセットが削除された等で表示できなかった。導入状態を再計算する。</summary>

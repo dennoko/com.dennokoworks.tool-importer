@@ -154,22 +154,30 @@ CREATE TABLE notifications (
    - グループ分けの結果、候補が 1 つになった場合はメニューを出さずにそのまま開く。
 
 ### 3.3 開き方
-対象フォルダの**ある場所**（親フォルダ）ではなく、**対象フォルダを開いた状態**（中身が見える階層）を表示する。Project ウィンドウは `EditorUtility.FocusProjectWindow` で前面に出す。
+対象フォルダの**ある場所**（親フォルダ）ではなく、**対象フォルダを開いた状態**（中身が見える階層）を表示する。
 
+- **対象の Project ウィンドウ**: 内部の `UnityEditor.ProjectBrowser` から 1 つ決め、そのインスタンスの `EditorWindow.Focus()` で前面に出す（別のタブの裏にあればそのタブに切り替わる）。
+  - `ProjectBrowser.s_LastInteractedProjectBrowser`（public static フィールド）を優先する。static なのでドメインリロード後は Project ウィンドウにフォーカスが当たるまで null になるため、null なら `Resources.FindObjectsOfTypeAll` で見つかった最初の ProjectBrowser を使う。
+  - `EditorUtility.FocusProjectWindow` は使わない。前面に出すウィンドウを自分で選ぶため、Project ウィンドウが複数あると操作対象と食い違う。また現在の `Selection` を表示し直すコマンドを送るため。
+  - Project ウィンドウが 1 つも開かれていなければ、エラーログ（Project タブが開かれていない旨）を出して何もしない。Project ウィンドウを新しく開くことはしない。
+- **フォルダを開くのは次のエディタ更新**（`EditorApplication.delayCall`）で行う。裏に隠れていたウィンドウは、前面に出した直後はまだ描画・初期化されていないことがあるため。
 - **2 カラム表示**: 左のフォルダツリーで対象フォルダを選び、右ペインに中身を出す。
-  - 公開 API が無いため、内部の `UnityEditor.ProjectBrowser` をリフレクションで呼ぶ（Unity 2022.3.22f1 で存在を確認）。
-    - `ProjectBrowser.s_LastInteractedProjectBrowser`（public static フィールド）で対象のウィンドウを取る。
+  - 公開 API が無いため、内部 API をリフレクションで呼ぶ（Unity 2022.3.22f1 で存在を確認）。
     - `IsTwoColumns()`（internal）で 2 カラム表示か判定する。
     - `SetFolderSelection(int[] selectedInstanceIDs, bool revealSelectionAndFrameLastSelected)`（internal）に対象フォルダの InstanceID と `true` を渡す。フォルダツリーでフォルダをクリックしたときと同じ処理。
+    - 失敗した場合は次のエディタ更新で 1 回だけやり直す。
   - 対象フォルダ自体は `Selection` に入れない。入れると Project ウィンドウが親フォルダを開いて対象フォルダをハイライトし直すため。
 - **1 カラム表示**: 対象フォルダを `Selection.activeObject` に設定し、フォルダ直下の最初のアセット（名前順）を `EditorGUIUtility.PingObject` して、対象フォルダを展開した状態にする。空のフォルダなら対象フォルダ自体を Ping する。
-- **内部 API が使えない場合**（Unity のバージョン違いで見つからない・例外が出た）: 1 カラム表示と同じ処理にする。2 カラム表示でも、中のアセットを Ping すると右ペインに対象フォルダの中身が出る。例外は警告ログに出す。
+- **内部 API が使えない場合**（Unity のバージョン違いで見つからない・やり直しても例外が出た）: `Selection` は変えずに、フォルダ直下の最初のアセットを Ping する。2 カラム表示でも、中のアセットを Ping すると右ペインに対象フォルダの中身が出る。2 カラム表示で `Selection` を変えると、後から届く選択変更の処理で親フォルダが開き直され、表示が安定しないため。例外は（`TargetInvocationException` の中身を）警告ログに出す。
+  - `ProjectBrowser` 型そのものが無い場合は、`EditorUtility.FocusProjectWindow` で前面に出してから同じく Ping だけ行う。
 
 ### 3.4 エッジケース
 | ケース | 挙動 |
 |---|---|
 | ボタンを押すまでの間にアセットが削除され、手順 2 で何も残らない | ボタン押下時に何もせず、ステータスに「プロジェクト内にインポート済みのアセットが見つかりません」を表示し、状態を再計算する |
 | パッケージ解析が無効（`scan.IsValid == false`） | 導入状態が `Unknown` のためボタンは無効 |
+| 一覧を読み込んだ後にパッケージが差し替わり（BLM で新しい版をダウンロードした等）、解析結果のキャッシュが古い | ステータスに「パッケージを解析中です。解析が終わってからもう一度押してください」を表示し、状態を再計算する（解析中はボタンが無効になる） |
+| Project ウィンドウが 1 つも開かれていない | エラーログに Project タブが開かれていない旨を出し、何もしない |
 | 古い版のパッケージだけがインポートされている（最新版とアセット構成が違う） | 最新パッケージと共通の GUID だけで判定する（導入判定と同じ基準）。GUID が 1 つも重ならなければ `NotInstalled` になりボタンは無効 |
 
 ---
@@ -201,4 +209,6 @@ CREATE TABLE notifications (
 2. Assets 直下に複数のフォルダを作るパッケージで候補メニューが出て、選んだフォルダが開くこと
 3. インポート後にフォルダを移動しても、移動先が開くこと
 4. 未導入のアイテムではボタンが無効になっていること
-5. Project ウィンドウが閉じている・別のタブの裏にある状態からでも開くこと
+5. Project ウィンドウが別のタブの裏にある状態からでも開くこと（スクリプトの再コンパイル直後で、Project タブを一度も表示していない状態を含む）
+6. 2 カラム表示で繰り返し押しても、毎回対象フォルダの中身が表示されること（親フォルダが開く回が無いこと）
+7. Project ウィンドウを閉じた状態で押すと、Console に Project タブが開かれていない旨のエラーが出ること
